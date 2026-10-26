@@ -40,6 +40,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
   const [phase, setPhase] = useState<'ready' | 'run' | 'done'>('ready');
   const [toast, setToast] = useState<string | null>(null);
   const [stumbled, setStumbled] = useState(false);
+  const [lane, setLane] = useState(sim.lane);
   const fastRef = useRef(false);
   const phaseRef = useRef(phase);
   const view = useRef({ laneX: 1, shake: 0, bob: 0, w: 0, h: 0 });
@@ -137,7 +138,10 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
   }, [sim, handleEvents, project, owned, reducedMotion, skin]);
 
   const move = useCallback((dir: -1 | 1) => {
-    if (phaseRef.current !== 'done') sim.moveLane(dir);
+    if (phaseRef.current !== 'done') {
+      sim.moveLane(dir);
+      setLane(sim.lane);
+    }
   }, [sim]);
 
   // Keyboard support (desktop testing).
@@ -195,6 +199,24 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
         <canvas ref={canvasRef} className="runner-canvas" aria-label="Laufstrecke mit drei Spuren" />
         {phase === 'ready' && <div className="stage-banner">Los geht’s!<small>Wische oder tippe ◀ ▶</small></div>}
         {phase === 'done' && <div className="stage-banner">8 Karten gesammelt!<small>Das Duell beginnt …</small></div>}
+        {phase !== 'done' && sim.gates[picks.length] && (
+          <div className="gate-preview" aria-live="polite">
+            <span className="gate-preview-label">Nächstes Tor {picks.length + 1}</span>
+            <div className="gate-preview-cards">
+              {sim.gates[picks.length].offers.map((o, i) => (
+                <Card
+                  key={`${picks.length}-${i}`}
+                  id={o.cardId}
+                  size="sm"
+                  badge={o.kind === 'discovery' ? 'discovery' : null}
+                  badgeText={owned.has(o.cardId) ? '★' : 'NEU'}
+                  mod={i === lane && stumbled ? STUMBLE_PENALTY : 0}
+                  className={i === lane ? 'lane-active' : ''}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         {toast && <div className="toast">{toast}</div>}
         <div className="legend" aria-hidden="true">
           <span><i className="dot silver" /> Deck</span>
@@ -304,7 +326,7 @@ function draw(
   // Moon.
   ctx.fillStyle = 'rgba(255,240,200,0.85)';
   ctx.beginPath();
-  ctx.arc(w * 0.8, horizon * 0.4, 14, 0, Math.PI * 2);
+  ctx.arc(w * 0.94, horizon * 0.22, 9, 0, Math.PI * 2);
   ctx.fill();
 
   // Ground.
@@ -472,8 +494,8 @@ function drawCard(
     ctx.fillStyle = '#fff';
     ctx.fillText(c.art, at.x, y + ch * 0.5);
   }
-  if (cw > 40) {
-    const fs = Math.round(cw * 0.2);
+  if (cw > 30) {
+    const fs = Math.max(9, Math.round(cw * 0.2));
     ctx.font = `800 ${fs}px system-ui, sans-serif`;
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = 'rgba(0,0,0,0.75)';

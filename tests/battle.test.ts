@@ -3,7 +3,7 @@ import {
   BattleState, BoardCell, CELL_COUNT, applyMove, cardValue, computeFlips, createBattle, isGameOver, legalMoves, outcome, score, toHand,
 } from '../src/game/battle';
 import { chooseCpuMove, drawCpuHand } from '../src/game/ai';
-import { CARDS, getCard } from '../src/game/cards';
+import { CARDS, CardDef, STARTER_DECK, cardPower, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
 
 const H = toHand(['c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08']);
@@ -21,6 +21,19 @@ function stateWith(board: (BoardCell | null)[], playerHand: (string | { cardId: 
   const hand = playerHand.map((c) => (typeof c === 'string' ? hc(c) : c));
   return { ...s, board, hands: { player: hand, cpu: s.hands.cpu } };
 }
+
+/** First card pair (attacker, defender) matching a condition – keeps tests independent of card balancing. */
+function findPair(pred: (a: CardDef, b: CardDef) => boolean): [CardDef, CardDef] {
+  for (const a of CARDS) for (const b of CARDS) if (pred(a, b)) return [a, b];
+  throw new Error('no matching card pair');
+}
+function findCard(pred: (c: CardDef) => boolean): CardDef {
+  const c = CARDS.find(pred);
+  if (!c) throw new Error('no matching card');
+  return c;
+}
+const strongest = [...CARDS].sort((a, b) => Math.min(b.top, b.right, b.bottom, b.left) - Math.min(a.top, a.right, a.bottom, a.left))[0];
+const weakest = [...CARDS].sort((a, b) => Math.max(a.top, a.right, a.bottom, a.left) - Math.max(b.top, b.right, b.bottom, b.left))[0];
 
 describe('Kampf-Regeln', () => {
   // Center cell 5 has neighbours: top 1, right 6, bottom 9, left 4.
@@ -45,44 +58,49 @@ describe('Kampf-Regeln', () => {
   }
 
   it('Gleichstand übernimmt nicht', () => {
-    // c01 top = 5, c12 bottom = 5
-    expect(getCard('c01').top).toBe(getCard('c12').bottom);
+    const [a, b] = findPair((a, b) => a.top === b.bottom);
     const board = emptyBoard();
-    board[1] = cpu('c12');
-    const next = applyMove(stateWith(board, ['c01']), { handIndex: 0, cell: 5 });
+    board[1] = cpu(b.id);
+    const next = applyMove(stateWith(board, [a.id]), { handIndex: 0, cell: 5 });
     expect(next.board[1]!.owner).toBe('cpu');
     expect(next.lastFlips).toEqual([]);
   });
 
   it('übernimmt keine diagonalen Karten', () => {
+    expect(Math.min(strongest.top, strongest.right, strongest.bottom, strongest.left)).toBeGreaterThan(
+      Math.max(weakest.top, weakest.right, weakest.bottom, weakest.left),
+    );
     const board = emptyBoard();
-    for (const c of [0, 2, 8, 10]) board[c] = cpu('c11');
-    const next = applyMove(stateWith(board, ['l04']), { handIndex: 0, cell: 5 });
+    for (const c of [0, 2, 8, 10]) board[c] = cpu(weakest.id);
+    const next = applyMove(stateWith(board, [strongest.id]), { handIndex: 0, cell: 5 });
     for (const c of [0, 2, 8, 10]) expect(next.board[c]!.owner).toBe('cpu');
   });
 
   it('löst keine Kettenreaktion aus', () => {
-    // l02 right 9 beats c08 left 5; c08 right 7 would beat c12 left 2 in a chain.
+    // Attacker X beats A (cell 6) on the right; A itself would beat B (cell 7) – a chain must not happen.
+    const [x, a] = findPair((x, a) => x.right > a.left && CARDS.some((b) => a.right > b.left));
+    const b = findCard((b) => a.right > b.left);
     const board = emptyBoard();
-    board[6] = cpu('c08');
-    board[7] = cpu('c12');
-    const next = applyMove(stateWith(board, ['l02']), { handIndex: 0, cell: 5 });
+    board[6] = cpu(a.id);
+    board[7] = cpu(b.id);
+    const next = applyMove(stateWith(board, [x.id]), { handIndex: 0, cell: 5 });
     expect(next.board[6]!.owner).toBe('player');
     expect(next.board[7]!.owner).toBe('cpu');
   });
 
   it('übernommene Karten wechseln nur den Besitzer, nicht den Platz', () => {
+    const [x, a] = findPair((x, a) => x.right > a.left);
     const board = emptyBoard();
-    board[6] = cpu('c08');
-    const next = applyMove(stateWith(board, ['l02']), { handIndex: 0, cell: 5 });
-    expect(next.board[6]).toEqual({ cardId: 'c08', mod: 0, owner: 'player', placedBy: 'cpu' });
+    board[6] = cpu(a.id);
+    const next = applyMove(stateWith(board, [x.id]), { handIndex: 0, cell: 5 });
+    expect(next.board[6]).toEqual({ cardId: a.id, mod: 0, owner: 'player', placedBy: 'cpu' });
   });
 
   it('übernimmt nie eigene Karten und verweigert belegte Felder', () => {
     const board = emptyBoard();
-    board[6] = { cardId: 'c12', mod: 0, owner: 'player', placedBy: 'player' };
-    expect(computeFlips(board, 5, hc('l04'), 'player')).toEqual([]);
-    expect(() => applyMove(stateWith(board, ['l04']), { handIndex: 0, cell: 6 })).toThrow();
+    board[6] = { cardId: weakest.id, mod: 0, owner: 'player', placedBy: 'player' };
+    expect(computeFlips(board, 5, hc(strongest.id), 'player')).toEqual([]);
+    expect(() => applyMove(stateWith(board, [strongest.id]), { handIndex: 0, cell: 6 })).toThrow();
   });
 
   it('spielt ein vollständiges Spiel mit 16 Zügen', () => {
@@ -108,26 +126,28 @@ describe('Kampf-Regeln', () => {
   });
 
   it('geschwächte Karten (−1) haben alle vier Werte um 1 verringert, aber nie unter 1', () => {
-    const c = getCard('c08'); // 3, 7, 2, 5
-    expect(cardValue(hc('c08', -1), 'top')).toBe(c.top - 1);
-    expect(cardValue(hc('c08', -1), 'right')).toBe(c.right - 1);
-    expect(cardValue(hc('c08', -1), 'bottom')).toBe(c.bottom - 1);
-    expect(cardValue(hc('c08', -1), 'left')).toBe(c.left - 1);
-    expect(cardValue(hc('c11', -5), 'top')).toBe(1);
+    const c = findCard((c) => Math.min(c.top, c.right, c.bottom, c.left) >= 2);
+    expect(cardValue(hc(c.id, -1), 'top')).toBe(c.top - 1);
+    expect(cardValue(hc(c.id, -1), 'right')).toBe(c.right - 1);
+    expect(cardValue(hc(c.id, -1), 'bottom')).toBe(c.bottom - 1);
+    expect(cardValue(hc(c.id, -1), 'left')).toBe(c.left - 1);
+    const one = findCard((c) => c.top === 1);
+    expect(cardValue(hc(one.id, -1), 'top')).toBe(1);
   });
 
   it('die Schwächung zählt beim Vergleich – für Angreifer und Verteidiger', () => {
-    // c01 top 5 vs. c11 bottom 7 … use c16 top 7 vs. c12 bottom 5: normally flips.
+    // Attacker exactly 1 higher: flips normally, but not when the attacker is weakened (then it is a tie).
+    const [a, b] = findPair((a, b) => a.top === b.bottom + 1 && b.bottom >= 2);
     const board = emptyBoard();
-    board[1] = cpu('c12');
-    expect(applyMove(stateWith(board, ['c16']), { handIndex: 0, cell: 5 }).lastFlips).toEqual([1]);
-    // c01 (top 5) beats nothing against c09 bottom 6, but a weakened defender (6-1=5) is a tie → still no flip.
-    board[1] = cpu('c09', -1);
-    expect(applyMove(stateWith(board, ['c01']), { handIndex: 0, cell: 5 }).lastFlips).toEqual([]);
-    // Weakened attacker: c06 top 5 vs. c11 bottom 7 → no; c10 top 7 −1 = 6 vs. c09 bottom 6 → tie, no flip.
-    board[1] = cpu('c09');
-    expect(applyMove(stateWith(board, [hc('c10', -1)]), { handIndex: 0, cell: 5 }).lastFlips).toEqual([]);
-    expect(applyMove(stateWith(board, ['c10']), { handIndex: 0, cell: 5 }).lastFlips).toEqual([1]);
+    board[1] = cpu(b.id);
+    expect(applyMove(stateWith(board, [a.id]), { handIndex: 0, cell: 5 }).lastFlips).toEqual([1]);
+    expect(applyMove(stateWith(board, [hc(a.id, -1)]), { handIndex: 0, cell: 5 }).lastFlips).toEqual([]);
+    // Equal values: no flip normally, but a weakened defender loses.
+    const [c, d] = findPair((c, d) => c.top === d.bottom && d.bottom >= 2);
+    board[1] = cpu(d.id);
+    expect(applyMove(stateWith(board, [c.id]), { handIndex: 0, cell: 5 }).lastFlips).toEqual([]);
+    board[1] = cpu(d.id, -1);
+    expect(applyMove(stateWith(board, [c.id]), { handIndex: 0, cell: 5 }).lastFlips).toEqual([1]);
   });
 
   it('8:8 ist unentschieden', () => {
@@ -139,9 +159,10 @@ describe('Kampf-Regeln', () => {
   });
 
   it('Computer bevorzugt eine unmittelbare Übernahme', () => {
+    // Only the second CPU card can capture the player's weak card in corner 0.
     const board = emptyBoard();
-    board[0] = { cardId: 'c11', mod: 0, owner: 'player', placedBy: 'player' }; // c11 right = 4
-    const s: BattleState = { ...createBattle(H, H, 'cpu'), board, hands: { player: H, cpu: toHand(['c02', 'l02']) } };
+    board[0] = { cardId: weakest.id, mod: 0, owner: 'player', placedBy: 'player' };
+    const s: BattleState = { ...createBattle(H, H, 'cpu'), board, hands: { player: H, cpu: toHand([weakest.id, strongest.id]) } };
     const move = chooseCpuMove(s, createRng(3));
     const next = applyMove(s, move);
     expect(next.lastFlips.length).toBeGreaterThan(0);
@@ -150,5 +171,27 @@ describe('Kampf-Regeln', () => {
   it('Computerhand hat 8 unterschiedliche Karten', () => {
     const hand = drawCpuHand(createRng(9));
     expect(new Set(hand.map((c) => c.cardId)).size).toBe(8);
+  });
+});
+
+describe('Balance', () => {
+  it('Computergegner ist ungefähr so stark wie das Starterdeck', () => {
+    const starterAvg = STARTER_DECK.reduce((s, id) => s + cardPower(getCard(id)), 0) / STARTER_DECK.length;
+    let sum = 0;
+    let n = 0;
+    for (let seed = 1; seed <= 500; seed++) {
+      for (const c of drawCpuHand(createRng(seed))) {
+        sum += cardPower(getCard(c.cardId));
+        n++;
+      }
+    }
+    const cpuAvg = sum / n;
+    expect(Math.abs(cpuAvg - starterAvg)).toBeLessThan(1.5);
+  });
+
+  it('der Computer bekommt nie mystische Karten', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      for (const c of drawCpuHand(createRng(seed))) expect(getCard(c.cardId).rarity).not.toBe('mythic');
+    }
   });
 });

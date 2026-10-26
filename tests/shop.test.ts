@@ -22,7 +22,7 @@ describe('Kartenshop – Booster-Packs', () => {
     const hero = PACKS.find((p) => p.id === 'helden')!;
     for (let seed = 1; seed <= 300; seed++) {
       const cards = rollPack(hero, createRng(seed));
-      expect(cards.some((id) => RARITY_ORDER[getCard(id).rarity] >= 2)).toBe(true);
+      expect(cards.some((id) => RARITY_ORDER[getCard(id).rarity] >= RARITY_ORDER.epic)).toBe(true);
     }
   });
 

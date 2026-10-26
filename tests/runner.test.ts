@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CARDS, STARTER_DECK } from '../src/game/cards';
+import { CARDS, RARITIES, RARITY_POWER, STARTER_DECK, cardPower, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
 import { BASE_SPEED, FINISH_DISTANCE, GATE_COUNT, RunnerSim, STUMBLE_PENALTY, generateGates } from '../src/game/runner';
 
@@ -113,13 +113,43 @@ describe('Runner', () => {
     expect(seconds).toBeLessThanOrEqual(45);
   });
 
-  it('Kartenpool hat 40 eindeutige Karten mit Werten 1–10', () => {
-    expect(CARDS).toHaveLength(40);
-    expect(new Set(CARDS.map((c) => c.id)).size).toBe(40);
-    expect(new Set(CARDS.map((c) => c.name)).size).toBe(40);
-    for (const c of CARDS) for (const v of [c.top, c.right, c.bottom, c.left]) {
-      expect(v).toBeGreaterThanOrEqual(1);
-      expect(v).toBeLessThanOrEqual(10);
+  it('Kartenpool: 100 eindeutige Karten, Werte 1–10, Stärke passt zur Seltenheit', () => {
+    expect(CARDS).toHaveLength(100);
+    expect(new Set(CARDS.map((c) => c.id)).size).toBe(100);
+    expect(new Set(CARDS.map((c) => c.name)).size).toBe(100);
+    for (const c of CARDS) {
+      for (const v of [c.top, c.right, c.bottom, c.left]) {
+        expect(v).toBeGreaterThanOrEqual(1);
+        expect(v).toBeLessThanOrEqual(10);
+      }
+      const [min, max] = RARITY_POWER[c.rarity];
+      expect(cardPower(c), c.name).toBeGreaterThanOrEqual(min);
+      expect(cardPower(c), c.name).toBeLessThanOrEqual(max);
     }
+    const count = (r: string) => CARDS.filter((c) => c.rarity === r).length;
+    expect([count('common'), count('uncommon'), count('rare'), count('epic'), count('legendary'), count('mythic')]).toEqual([30, 24, 20, 14, 8, 4]);
+  });
+
+  it('jede höhere Seltenheit ist im Schnitt stärker', () => {
+    const avg = (r: string) => {
+      const cs = CARDS.filter((c) => c.rarity === r);
+      return cs.reduce((s, c) => s + cardPower(c), 0) / cs.length;
+    };
+    const order = RARITIES.map(avg);
+    for (let i = 1; i < order.length; i++) expect(order[i]).toBeGreaterThan(order[i - 1]);
+  });
+
+  it('mystische Entdeckungen sind sehr selten (etwa 1 % pro Tor)', () => {
+    let mythic = 0;
+    let total = 0;
+    for (let seed = 1; seed <= 2000; seed++) {
+      for (const g of generateGates(STARTER_DECK, createRng(seed))) {
+        const d = g.offers.find((o) => o.kind === 'discovery')!;
+        total++;
+        if (getCard(d.cardId).rarity === 'mythic') mythic++;
+      }
+    }
+    expect(mythic / total).toBeGreaterThan(0.004);
+    expect(mythic / total).toBeLessThan(0.02);
   });
 });

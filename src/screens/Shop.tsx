@@ -1,6 +1,6 @@
 import { CSSProperties, useMemo, useState } from 'react';
 import { Card } from '../components/Card';
-import { CARDS, getCard } from '../game/cards';
+import { CARDS, RARITIES, RARITY_LABEL, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
 import { PACKS, PackCard, PackDef, buyPack, buySkin, equipSkin } from '../game/shop';
 import { SKINS, SkinDef } from '../game/skins';
@@ -20,9 +20,12 @@ export function skinStyle(colors: [string, string, string]): CSSProperties {
 const PACK_ART: Record<string, string> = { abenteurer: '🎴', helden: '👑' };
 
 function odds(pack: PackDef): string {
-  const total = Object.values(pack.weights).reduce((a, b) => a + b, 0);
-  const pct = (n: number) => `${Math.round((n / total) * 100)} %`;
-  return `Gewöhnlich ${pct(pack.weights.common)} · Selten ${pct(pack.weights.rare)} · Episch ${pct(pack.weights.epic)} · Legendär ${pct(pack.weights.legendary)}`;
+  const total = RARITIES.reduce((sum, r) => sum + pack.weights[r], 0);
+  const pct = (n: number) => {
+    const v = (n / total) * 100;
+    return `${v >= 1 ? Math.round(v) : v.toFixed(1).replace('.', ',')} %`;
+  };
+  return RARITIES.map((r) => `${RARITY_LABEL[r]} ${pct(pack.weights[r])}`).join(' · ');
 }
 
 export function Shop({ save, onChange, onBack }: Props) {

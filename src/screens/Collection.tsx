@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Card } from '../components/Card';
-import { CARDS, RARITY_LABEL, Rarity } from '../game/cards';
+import { CARDS, RARITIES, RARITY_LABEL, Rarity } from '../game/cards';
 import { SaveData } from '../game/storage';
 import { Header } from './Header';
 import { CardDetail } from './CardDetail';
 
-const FILTERS: (Rarity | 'all')[] = ['all', 'common', 'rare', 'epic', 'legendary'];
+const FILTERS: (Rarity | 'all')[] = ['all', ...RARITIES];
 
 export function Collection({ save, onBack }: { save: SaveData; onBack: () => void }) {
   const [filter, setFilter] = useState<Rarity | 'all'>('all');

@@ -29,7 +29,7 @@ export function Rules({ onBack }: { onBack: () => void }) {
 
         <h2>Deck</h2>
         <p>Dein Deck besteht aus genau 20 verschiedenen Karten aus deiner Sammlung.</p>
-        <p>Der kleine Edelstein oben rechts zeigt die Seltenheit: <b>grau</b> gewöhnlich, <b style={{ color: 'var(--rare)' }}>grün</b> selten, <b style={{ color: 'var(--epic)' }}>lila</b> episch, <b style={{ color: 'var(--legendary)' }}>gold</b> legendär.</p>
+        <p>Es gibt 100 Karten. Der kleine Edelstein oben rechts zeigt die Seltenheit – je seltener, desto stärker: <b>grau</b> gewöhnlich, <b style={{ color: 'var(--uncommon)' }}>grün</b> ungewöhnlich, <b style={{ color: 'var(--rare)' }}>blau</b> selten, <b style={{ color: 'var(--epic)' }}>lila</b> episch, <b style={{ color: 'var(--legendary)' }}>gold</b> legendär und <b className="rarity-text rarity-mythic">regenbogen</b> mystisch (sehr selten!).</p>
       </div>
     </main>
   );

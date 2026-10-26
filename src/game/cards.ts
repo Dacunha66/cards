@@ -1,6 +1,15 @@
-// All 40 cards of Project Card Rush. Names and art are original placeholders.
+// All 100 cards of Project Card Rush. Names and art are original placeholders.
+// Strength follows rarity: each rarity has a fixed range for the sum of the four values.
+import { Rng, pickWeighted } from './rng';
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
+
+export const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+
+/** Allowed range for the sum of the four values, per rarity. */
+export const RARITY_POWER: Record<Rarity, [min: number, max: number]> = {
+  common: [13, 16], uncommon: [17, 19], rare: [20, 22], epic: [23, 25], legendary: [26, 28], mythic: [29, 32],
+};
 
 export interface CardDef {
   id: string;
@@ -18,61 +27,125 @@ export interface CardDef {
 
 export const RARITY_LABEL: Record<Rarity, string> = {
   common: 'Gewöhnlich',
+  uncommon: 'Ungewöhnlich',
   rare: 'Selten',
   epic: 'Episch',
   legendary: 'Legendär',
+  mythic: 'Mystisch',
 };
 
-export const RARITY_ORDER: Record<Rarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+export const RARITY_ORDER: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 
 type Row = [id: string, name: string, rarity: Rarity, t: number, r: number, b: number, l: number, art: string, hue: number];
 
 // [top, right, bottom, left]
 const ROWS: Row[] = [
-  // Gewöhnlich (16)
-  ['c01', 'Moosling', 'common', 5, 3, 4, 6, '🌿', 110],
-  ['c02', 'Funkenwicht', 'common', 6, 5, 2, 4, '✨', 50],
-  ['c03', 'Kieselkrabbe', 'common', 3, 6, 5, 3, '🦀', 15],
-  ['c04', 'Nebelmotte', 'common', 4, 2, 6, 5, '🦋', 260],
-  ['c05', 'Dornenigel', 'common', 2, 5, 5, 6, '🦔', 30],
-  ['c06', 'Sumpfunke', 'common', 5, 4, 3, 5, '🐸', 130],
-  ['c07', 'Glutkäfer', 'common', 6, 3, 5, 3, '🐞', 0],
-  ['c08', 'Windhase', 'common', 3, 7, 2, 5, '🐇', 190],
-  ['c09', 'Pilzwächter', 'common', 4, 4, 6, 3, '🍄', 340],
-  ['c10', 'Eisspatz', 'common', 7, 2, 3, 5, '🐦', 200],
-  ['c11', 'Rindenwurm', 'common', 2, 4, 7, 4, '🪱', 25],
-  ['c12', 'Schlammschnecke', 'common', 5, 5, 5, 2, '🐌', 70],
-  ['c13', 'Dämmerfledermaus', 'common', 6, 2, 4, 6, '🦇', 280],
-  ['c14', 'Bernsteinfuchs', 'common', 4, 6, 3, 5, '🦊', 35],
-  ['c15', 'Flussotter', 'common', 3, 5, 6, 4, '🦦', 180],
-  ['c16', 'Felsbock', 'common', 7, 4, 2, 4, '🐐', 45],
-  // Selten (12)
-  ['r01', 'Klingenfalke', 'rare', 7, 6, 3, 6, '🦅', 40],
-  ['r02', 'Runenwolf', 'rare', 6, 7, 5, 4, '🐺', 220],
-  ['r03', 'Kristallskorpion', 'rare', 4, 5, 7, 6, '🦂', 300],
-  ['r04', 'Sturmross', 'rare', 5, 8, 4, 5, '🐎', 210],
-  ['r05', 'Irrlichthexe', 'rare', 7, 3, 6, 6, '🧙', 270],
-  ['r06', 'Eichenhüter', 'rare', 6, 5, 6, 5, '🌳', 120],
+  // Gewöhnlich (30) – Wertesumme 13–16
+  ['c01', 'Moosling', 'common', 4, 2, 3, 6, '🌿', 110],
+  ['c02', 'Funkenwicht', 'common', 6, 5, 1, 4, '✨', 50],
+  ['c03', 'Kieselkrabbe', 'common', 2, 5, 4, 2, '🦀', 15],
+  ['c04', 'Nebelmotte', 'common', 4, 2, 5, 4, '🦋', 260],
+  ['c05', 'Dornenigel', 'common', 1, 4, 4, 4, '🦔', 30],
+  ['c06', 'Sumpfunke', 'common', 4, 4, 3, 4, '🐸', 130],
+  ['c07', 'Glutkäfer', 'common', 6, 2, 4, 2, '🐞', 0],
+  ['c08', 'Windhase', 'common', 3, 7, 1, 5, '🐇', 190],
+  ['c09', 'Pilzwächter', 'common', 4, 4, 5, 2, '🍄', 340],
+  ['c10', 'Eisspatz', 'common', 6, 2, 2, 4, '🐦', 200],
+  ['c11', 'Rindenwurm', 'common', 1, 4, 6, 4, '🪱', 25],
+  ['c12', 'Schlammschnecke', 'common', 4, 4, 4, 2, '🐌', 70],
+  ['c13', 'Dämmerfledermaus', 'common', 5, 1, 3, 5, '🦇', 280],
+  ['c14', 'Bernsteinfuchs', 'common', 3, 4, 2, 4, '🦊', 35],
+  ['c15', 'Flussotter', 'common', 2, 4, 6, 3, '🦦', 180],
+  ['c16', 'Felsbock', 'common', 7, 4, 1, 4, '🐐', 45],
+  ['c17', 'Wurzelkobold', 'common', 4, 3, 2, 4, '🌱', 100],
+  ['c18', 'Grillenbarde', 'common', 4, 1, 5, 5, '🦗', 80],
+  ['c19', 'Moospanzer', 'common', 4, 3, 6, 2, '🐢', 150],
+  ['c20', 'Staubmaus', 'common', 4, 3, 4, 3, '🐭', 30],
+  ['c21', 'Zapfenwicht', 'common', 2, 4, 5, 2, '🌰', 25],
+  ['c22', 'Federling', 'common', 5, 2, 3, 3, '🪶', 200],
+  ['c23', 'Netzweberin', 'common', 4, 6, 3, 2, '🕸️', 270],
+  ['c24', 'Borstenkeiler', 'common', 5, 3, 2, 5, '🐗', 20],
+  ['c25', 'Muschelwächter', 'common', 4, 6, 3, 3, '🐚', 190],
+  ['c26', 'Laternenkäfer', 'common', 5, 5, 2, 3, '🪲', 50],
+  ['c27', 'Rabenbote', 'common', 3, 5, 1, 5, '🐦‍⬛', 260],
+  ['c28', 'Distelbock', 'common', 5, 2, 2, 4, '🌾', 70],
+  ['c29', 'Pfützengeist', 'common', 3, 5, 5, 3, '💧', 210],
+  ['c30', 'Hornschaf', 'common', 3, 4, 6, 2, '🐑', 40],
+  // Ungewöhnlich (24) – Wertesumme 17–19
+  ['u01', 'Dachsritter', 'uncommon', 5, 5, 5, 4, '🦡', 30],
+  ['u02', 'Sumpfkaiman', 'uncommon', 4, 5, 4, 4, '🐊', 140],
+  ['u03', 'Flamingoseherin', 'uncommon', 7, 3, 5, 4, '🦩', 330],
+  ['u04', 'Pfauenmagier', 'uncommon', 2, 6, 5, 5, '🦚', 160],
+  ['u05', 'Papageienpirat', 'uncommon', 4, 6, 5, 4, '🦜', 110],
+  ['u06', 'Schwanenmaid', 'uncommon', 5, 3, 7, 4, '🦢', 200],
+  ['u07', 'Eichhornspäher', 'uncommon', 3, 6, 3, 6, '🐿️', 25],
+  ['u08', 'Biberbaumeister', 'uncommon', 2, 5, 5, 5, '🦫', 30],
+  ['u09', 'Hirschwächter', 'uncommon', 4, 5, 5, 3, '🦌', 35],
+  ['u10', 'Kaktusgolem', 'uncommon', 3, 3, 4, 7, '🌵', 100],
+  ['u11', 'Sonnenblumenhexe', 'uncommon', 3, 6, 3, 5, '🌻', 50],
+  ['u12', 'Herbstgeist', 'uncommon', 3, 5, 4, 5, '🍁', 20],
+  ['u13', 'Kleeblattfee', 'uncommon', 6, 5, 5, 1, '🍀', 120],
+  ['u14', 'Bienenkönigin', 'uncommon', 3, 6, 7, 3, '🐝', 48],
+  ['u15', 'Ameisenkrieger', 'uncommon', 5, 4, 6, 3, '🐜', 10],
+  ['u16', 'Scherenkrebs', 'uncommon', 5, 4, 3, 7, '🦞', 5],
+  ['u17', 'Kugelfisch', 'uncommon', 4, 5, 6, 4, '🐡', 190],
+  ['u18', 'Riffschwimmer', 'uncommon', 6, 6, 5, 1, '🐠', 185],
+  ['u19', 'Seehundbarde', 'uncommon', 4, 4, 5, 4, '🦭', 210],
+  ['u20', 'Lehmgolem', 'uncommon', 5, 7, 3, 4, '🗿', 30],
+  ['u21', 'Bogenschützin', 'uncommon', 5, 6, 2, 6, '🏹', 90],
+  ['u22', 'Schildträger', 'uncommon', 6, 3, 6, 2, '🛡️', 220],
+  ['u23', 'Kerzenwächter', 'uncommon', 7, 3, 5, 3, '🕯️', 45],
+  ['u24', 'Knochensammler', 'uncommon', 5, 4, 5, 4, '🦴', 40],
+  // Selten (20) – Wertesumme 20–22
+  ['r01', 'Klingenfalke', 'rare', 7, 5, 3, 5, '🦅', 40],
+  ['r02', 'Runenwolf', 'rare', 5, 6, 5, 4, '🐺', 220],
+  ['r03', 'Kristallskorpion', 'rare', 3, 5, 7, 6, '🦂', 300],
+  ['r04', 'Sturmross', 'rare', 5, 8, 3, 5, '🐎', 210],
+  ['r05', 'Irrlichthexe', 'rare', 7, 3, 5, 5, '🧙', 270],
+  ['r06', 'Eichenhüter', 'rare', 5, 5, 5, 5, '🌳', 120],
   ['r07', 'Lavaechse', 'rare', 8, 4, 5, 4, '🦎', 10],
-  ['r08', 'Gezeitenschlange', 'rare', 3, 6, 6, 7, '🐍', 170],
-  ['r09', 'Schattenluchs', 'rare', 5, 4, 8, 5, '🐆', 250],
-  ['r10', 'Mondeule', 'rare', 6, 6, 4, 6, '🦉', 230],
+  ['r08', 'Gezeitenschlange', 'rare', 3, 5, 5, 7, '🐍', 170],
+  ['r09', 'Schattenluchs', 'rare', 5, 3, 8, 5, '🐆', 250],
+  ['r10', 'Mondeule', 'rare', 6, 6, 3, 6, '🦉', 230],
   ['r11', 'Frostbär', 'rare', 7, 5, 5, 5, '🐻', 195],
   ['r12', 'Knochenritter', 'rare', 4, 7, 6, 5, '💀', 0],
-  // Episch (8)
-  ['e01', 'Aschenphönix', 'epic', 8, 6, 5, 7, '🔥', 20],
-  ['e02', 'Tiefseekraken', 'epic', 5, 8, 7, 6, '🐙', 285],
-  ['e03', 'Donnertitan', 'epic', 9, 5, 6, 6, '⚡', 55],
-  ['e04', 'Sternenweberin', 'epic', 6, 7, 6, 7, '🌌', 245],
-  ['e05', 'Smaragddrache', 'epic', 7, 7, 4, 8, '🐉', 140],
-  ['e06', 'Grabkönig', 'epic', 6, 5, 9, 6, '👑', 300],
-  ['e07', 'Spiegelgolem', 'epic', 7, 6, 7, 6, '🪞', 190],
-  ['e08', 'Wüstensphinx', 'epic', 5, 9, 6, 6, '🦁', 40],
-  // Legendär (4)
-  ['l01', 'Himmelswal', 'legendary', 9, 7, 6, 8, '🐋', 205],
-  ['l02', 'Chronomagier', 'legendary', 7, 9, 8, 6, '⏳', 45],
-  ['l03', 'Weltenbaum-Avatar', 'legendary', 8, 6, 9, 7, '🌲', 125],
-  ['l04', 'Nachtdrachin Vyrax', 'legendary', 10, 7, 5, 8, '🌑', 265],
+  ['r13', 'Haifischjäger', 'rare', 5, 7, 6, 4, '🦈', 200],
+  ['r14', 'Delfinrufer', 'rare', 5, 5, 4, 7, '🐬', 195],
+  ['r15', 'Elfenwaldläuferin', 'rare', 7, 3, 4, 8, '🧝', 120],
+  ['r16', 'Tiefenmaid', 'rare', 3, 4, 8, 5, '🧜', 185],
+  ['r17', 'Funkenfee', 'rare', 6, 6, 2, 6, '🧚', 300],
+  ['r18', 'Nebelgeist', 'rare', 5, 5, 6, 6, '👻', 240],
+  ['r19', 'Säbelzahn', 'rare', 8, 4, 5, 5, '🐅', 30],
+  ['r20', 'Bisonwalze', 'rare', 6, 4, 4, 6, '🦬', 25],
+  // Episch (14) – Wertesumme 23–25
+  ['e01', 'Aschenphönix', 'epic', 7, 6, 5, 6, '🔥', 20],
+  ['e02', 'Tiefseekraken', 'epic', 4, 8, 7, 6, '🐙', 285],
+  ['e03', 'Donnertitan', 'epic', 9, 4, 6, 6, '⚡', 55],
+  ['e04', 'Sternenweberin', 'epic', 5, 7, 5, 6, '🌌', 245],
+  ['e05', 'Smaragddrache', 'epic', 6, 6, 4, 8, '🐉', 140],
+  ['e06', 'Grabkönig', 'epic', 6, 4, 8, 6, '👑', 300],
+  ['e07', 'Spiegelgolem', 'epic', 6, 6, 6, 6, '🪞', 190],
+  ['e08', 'Wüstensphinx', 'epic', 4, 9, 5, 5, '🦁', 40],
+  ['e09', 'Vampirgraf', 'epic', 6, 5, 6, 6, '🧛', 340],
+  ['e10', 'Flaschengeist', 'epic', 5, 6, 7, 5, '🧞', 220],
+  ['e11', 'Sturmbringer', 'epic', 9, 4, 6, 5, '🌪️', 210],
+  ['e12', 'Kristallorakel', 'epic', 5, 4, 8, 8, '🔮', 280],
+  ['e13', 'Meteorreiter', 'epic', 6, 6, 6, 6, '☄️', 20],
+  ['e14', 'Mammutfürst', 'epic', 6, 6, 6, 5, '🦣', 25],
+  // Legendär (8) – Wertesumme 26–28
+  ['l01', 'Himmelswal', 'legendary', 8, 7, 6, 7, '🐋', 205],
+  ['l02', 'Chronomagier', 'legendary', 6, 9, 7, 5, '⏳', 45],
+  ['l03', 'Weltenbaum-Avatar', 'legendary', 7, 5, 9, 6, '🌲', 125],
+  ['l04', 'Nachtdrachin Vyrax', 'legendary', 10, 6, 4, 7, '🌑', 265],
+  ['l05', 'Vulkanherz', 'legendary', 9, 7, 7, 3, '🌋', 10],
+  ['l06', 'Ozeanwächter', 'legendary', 6, 10, 5, 7, '🌊', 200],
+  ['l07', 'Sonnenkönig', 'legendary', 6, 5, 5, 10, '☀️', 45],
+  ['l08', 'Urzeitrex', 'legendary', 7, 6, 10, 5, '🦖', 120],
+  // Mystisch (4) – Wertesumme 29–32
+  ['m01', 'Aurora-Schlange', 'mythic', 7, 7, 6, 9, '🌈', 300],
+  ['m02', 'Mondweberin Lyra', 'mythic', 6, 10, 10, 5, '🌙', 250],
+  ['m03', 'Himmelsschmied', 'mythic', 7, 5, 8, 10, '⚒️', 30],
+  ['m04', 'Urdrache Ignivor', 'mythic', 10, 4, 5, 10, '🐲', 0],
 ];
 
 export const CARDS: CardDef[] = ROWS.map(([id, name, rarity, top, right, bottom, left, art, hue]) => ({
@@ -91,21 +164,32 @@ export function isCardId(id: unknown): id is string {
   return typeof id === 'string' && BY_ID.has(id);
 }
 
-/** Cards unlocked for a brand-new player: all commons and the first 6 rares (22). */
+/** Cards unlocked for a brand-new player: 16 commons and 8 uncommons (24). */
 export const STARTING_UNLOCKED: string[] = [
-  ...CARDS.filter((c) => c.rarity === 'common').map((c) => c.id),
-  'r01', 'r02', 'r03', 'r04', 'r05', 'r06',
+  'c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08', 'c09', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16',
+  'u01', 'u02', 'u03', 'u04', 'u05', 'u06', 'u07', 'u08',
 ];
 
 /** Predefined starter deck: 20 distinct cards from the starting collection. */
 export const STARTER_DECK: string[] = [
-  'c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08', 'c09', 'c10',
-  'c13', 'c14', 'c15', 'c16',
-  'r01', 'r02', 'r03', 'r04', 'r05', 'r06',
+  'c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08', 'c09', 'c10', 'c13', 'c14',
+  'u01', 'u02', 'u03', 'u04', 'u05', 'u06', 'u07', 'u08',
 ];
 
 export const DECK_SIZE = 20;
 
 export function cardPower(c: CardDef): number {
   return c.top + c.right + c.bottom + c.left;
+}
+
+/**
+ * Picks a card where `shares` is the chance per rarity (not per card), so adding more
+ * commons does not make mythic cards rarer or more common. Returns null if nothing matches.
+ */
+export function pickByRarity(rng: Rng, pool: readonly CardDef[], shares: Partial<Record<Rarity, number>>): CardDef | null {
+  const candidates = pool.filter((c) => (shares[c.rarity] ?? 0) > 0);
+  if (candidates.length === 0) return null;
+  const count: Partial<Record<Rarity, number>> = {};
+  for (const c of candidates) count[c.rarity] = (count[c.rarity] ?? 0) + 1;
+  return pickWeighted(rng, candidates, (c) => shares[c.rarity]! / count[c.rarity]!);
 }

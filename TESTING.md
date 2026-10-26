@@ -1,5 +1,19 @@
 # Testprotokoll
 
+## Version 1.2 (Feedback-Runde 2)
+
+Änderungen: 100 Karten in 6 Seltenheiten (gewöhnlich, ungewöhnlich, selten, episch, legendär, mystisch) mit fester Stärke-Skala; Vorschau des nächsten Tors im Lauf; Gegner neu abgestimmt.
+
+**Automatische Tests (insgesamt 48, alle bestanden)**
+- 100 Karten mit eindeutigen IDs und Namen; jede Karte liegt im Stärkebereich ihrer Seltenheit; Anzahl je Seltenheit 30/24/20/14/8/4; jede höhere Seltenheit ist im Schnitt stärker
+- Mystische Entdeckungen kommen bei etwa 1 % der Tore vor (16 000 simulierte Tore)
+- Gegner ist ungefähr so stark wie das Starterdeck und bekommt nie mystische Karten
+- Kampftests suchen sich passende Karten selbst und hängen nicht mehr von einzelnen Kartenwerten ab
+
+**Balance-Simulation (2000 Duelle, nicht im Repo):** Zufällige Kartenwahl im Lauf gewinnt ca. 44 % (Version 1.1: 42 %), immer die stärkste Karte wählen gewinnt ca. 75 % (1.1: 84 %). Der Gegner ist damit etwa gleich schwer wie vorher.
+
+**Browser-Durchlauf (Chromium, 390×844 und 375×667):** Vorschau des nächsten Tors gut lesbar, Sammlung zeigt 100 Karten und den Filter „Mystisch“, vollständiger Lauf und Duell ohne JavaScript-Fehler.
+
 ## Version 1.1 (Feedback-Runde 1)
 
 Änderungen: Lauf langsamer (ca. 40 s statt 36 s), Stolpersteine schwächen die nächste Karte um 1, Kartenshop mit Booster-Packs und Skins.

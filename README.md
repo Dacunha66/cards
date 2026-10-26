@@ -16,7 +16,7 @@ Ein mobiles Browserspiel für iPhone und iPad (Hochformat): Du **rennst** durch 
 Tipp: In Safari über **Teilen → „Zum Home-Bildschirm“** bekommst du ein App-Symbol.
 
 ### So funktioniert das Spiel
-- **Lauf:** Die Figur rennt von allein. **Wische** nach links/rechts oder tippe **◀ ▶**. In jedem der 8 Tore nimmst du die Karte auf deiner Spur.
+- **Lauf:** Die Figur rennt von allein. **Wische** nach links/rechts oder tippe **◀ ▶**. In jedem der 8 Tore nimmst du die Karte auf deiner Spur. Oben im Himmel siehst du das **nächste Tor** groß mit allen Werten; die Karte deiner Spur ist weiß umrandet.
   - Silberner Rahmen = Karte aus deinem Deck
   - Goldener Rahmen mit **NEU** = Entdeckung aus dem restlichen Kartenpool
   - **Stolpersteine:** Läufst du in einen Stein, ist die **nächste Karte** im Duell um 1 schwächer (alle vier Werte, mindestens 1). Du erkennst sie am roten „−1“.
@@ -24,6 +24,7 @@ Tipp: In Safari über **Teilen → „Zum Home-Bildschirm“** bekommst du ein A
 - **Duell:** Tippe eine Handkarte an, dann ein freies Feld. Ist dein Wert auf der Seite zur gegnerischen Nachbarkarte **höher**, gehört sie dir. Nach 16 Zügen gewinnt, wer mehr Felder hat.
 - **Belohnung:** Sieg = 🪙 100 und die seltenste neue Entdeckung wird freigeschaltet. Unentschieden = 🪙 40. Niederlage = 🪙 15.
 - **Shop:** Mit Münzen kaufst du **Booster-Packs** (Abenteurer-Pack 🪙 150, Helden-Pack 🪙 400 mit garantierter epischer oder legendärer Karte) und **Skins** (Kartenfarbe im Duell, Figur im Lauf). Doppelte Karten aus Packs werden in Münzen umgetauscht.
+- **Karten:** 100 Karten in 6 Seltenheiten. Je seltener, desto stärker (Summe der vier Werte): gewöhnlich 13–16, ungewöhnlich 17–19, selten 20–22, episch 23–25, legendär 26–28, **mystisch 29–32** (sehr selten, Regenbogen-Rahmen).
 - **Sammlung / Deck bearbeiten:** Das Deck braucht genau 20 verschiedene Karten.
 
 ### Wichtig zum Spielstand

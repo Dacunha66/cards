@@ -1,7 +1,7 @@
 // Simple computer opponent: prefers immediate captures, then safe placements.
 import { BattleState, HAND_SIZE, HandCard, Move, cardValue, computeFlips, legalMoves, neighbours, toHand } from './battle';
-import { CARDS, Rarity } from './cards';
-import { Rng, pickWeighted } from './rng';
+import { CARDS, Rarity, pickByRarity } from './cards';
+import { Rng } from './rng';
 
 export function chooseCpuMove(state: BattleState, rng: Rng): Move {
   const moves = legalMoves(state);
@@ -28,14 +28,15 @@ export function chooseCpuMove(state: BattleState, rng: Rng): Move {
   return best;
 }
 
-const CPU_WEIGHT: Record<Rarity, number> = { common: 5, rare: 4, epic: 1.5, legendary: 0.4 };
+/** Chance per rarity for the computer's cards – tuned (by simulation) to match the difficulty of version 1.1. */
+export const CPU_SHARE: Record<Rarity, number> = { common: 60, uncommon: 35, rare: 5, epic: 0, legendary: 0, mythic: 0 };
 
-/** Draws 8 distinct cards for the computer, mostly commons and rares. */
+/** Draws 8 distinct cards for the computer, mostly commons and uncommons. */
 export function drawCpuHand(rng: Rng): HandCard[] {
   const pool = [...CARDS];
   const hand: string[] = [];
   while (hand.length < HAND_SIZE) {
-    const card = pickWeighted(rng, pool, (c) => CPU_WEIGHT[c.rarity]);
+    const card = pickByRarity(rng, pool, CPU_SHARE)!;
     pool.splice(pool.indexOf(card), 1);
     hand.push(card.id);
   }

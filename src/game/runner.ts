@@ -1,5 +1,5 @@
 // Runner logic, independent of rendering: 3 lanes, 8 card gates, cosmetic obstacles.
-import { CARDS } from './cards';
+import { CARDS, Rarity, pickByRarity } from './cards';
 import { Rng, randInt, shuffle } from './rng';
 
 export const LANES = 3;
@@ -10,6 +10,9 @@ export const BASE_SPEED = 8; // units per second → ~40 s for a full run
 /** Value penalty for the next card after hitting a stumbling stone. */
 export const STUMBLE_PENALTY = -1;
 export const FINISH_DISTANCE = FIRST_GATE + GATE_SPACING * (GATE_COUNT - 1) + 8;
+
+/** Chance per rarity for a discovery – mythic cards are very rare (about 1 % per gate). */
+export const DISCOVERY_SHARE: Record<Rarity, number> = { common: 28, uncommon: 30, rare: 24, epic: 12, legendary: 5, mythic: 1 };
 
 export type OfferKind = 'deck' | 'discovery';
 
@@ -45,7 +48,7 @@ export type RunnerEvent =
 export function generateGates(deck: string[], rng: Rng): Gate[] {
   if (deck.length < 2) throw new Error('Deck needs at least 2 cards');
   const inDeck = new Set(deck);
-  const pool = CARDS.map((c) => c.id).filter((id) => !inDeck.has(id));
+  const pool = CARDS.filter((c) => !inDeck.has(c.id));
   const gates: Gate[] = [];
   for (let i = 0; i < GATE_COUNT; i++) {
     const [a, b] = shuffle(rng, deck).slice(0, 2);
@@ -53,7 +56,8 @@ export function generateGates(deck: string[], rng: Rng): Gate[] {
       { cardId: a, kind: 'deck' },
       { cardId: b, kind: 'deck' },
     ];
-    if (pool.length > 0) offers.push({ cardId: pool[randInt(rng, pool.length)], kind: 'discovery' });
+    const discovery = pickByRarity(rng, pool, DISCOVERY_SHARE);
+    if (discovery) offers.push({ cardId: discovery.id, kind: 'discovery' });
     else offers.push({ cardId: shuffle(rng, deck)[0], kind: 'deck' });
     gates.push({ index: i, distance: FIRST_GATE + i * GATE_SPACING, offers: shuffle(rng, offers) });
   }
