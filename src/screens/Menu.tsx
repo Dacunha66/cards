@@ -1,0 +1,49 @@
+import { CARDS } from '../game/cards';
+import { SaveData } from '../game/storage';
+
+interface Props {
+  save: SaveData;
+  saveOk: boolean;
+  onPlay: () => void;
+  onNavigate: (screen: 'collection' | 'deck' | 'rules') => void;
+  onToggleReducedMotion: () => void;
+}
+
+export function Menu({ save, saveOk, onPlay, onNavigate, onToggleReducedMotion }: Props) {
+  const { wins, draws, losses } = save.stats;
+  return (
+    <main className="screen menu">
+      <div className="logo">
+        <div className="logo-cards" aria-hidden="true">
+          <span>🃏</span><span>⚡</span><span>🃏</span>
+        </div>
+        <h1>Project<br /><strong>Card Rush</strong></h1>
+        <p className="tagline">Renne. Sammle. Erobere das Raster.</p>
+      </div>
+
+      <div className="wallet" aria-label="Spielstand">
+        <span>🪙 {save.coins}</span>
+        <span>🃏 {save.unlocked.length}/{CARDS.length}</span>
+        <span>🏆 {wins} · 🤝 {draws} · 💀 {losses}</span>
+      </div>
+
+      <nav className="menu-buttons">
+        <button type="button" className="btn btn-primary btn-big" onClick={onPlay}>▶ Spielen</button>
+        <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
+        <button type="button" className="btn" onClick={() => onNavigate('deck')}>🗂️ Deck bearbeiten</button>
+        <button type="button" className="btn" onClick={() => onNavigate('rules')}>📜 Regeln</button>
+      </nav>
+
+      <label className="toggle">
+        <input type="checkbox" checked={save.settings.reducedMotion} onChange={onToggleReducedMotion} />
+        <span>Animationen reduzieren</span>
+      </label>
+
+      <p className="fineprint">
+        {saveOk
+          ? 'Dein Fortschritt wird nur in diesem Browser auf diesem Gerät gespeichert. Ohne Konto gibt es keine Sicherung auf anderen Geräten.'
+          : '⚠️ Speichern ist in diesem Browser gerade nicht möglich (z. B. im privaten Modus). Fortschritt geht beim Schließen verloren.'}
+      </p>
+    </main>
+  );
+}
