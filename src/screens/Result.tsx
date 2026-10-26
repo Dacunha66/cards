@@ -38,7 +38,7 @@ export function Result({ outcome, reward, score, coins, onAgain, onMenu }: Props
           <p className="muted">Tipp: Nimm im Lauf goldene „NEU“-Karten, um nach einem Sieg neue Karten zu bekommen.</p>
         )}
         {outcome !== 'win' && <p className="muted">Nur ein Sieg schaltet neue Karten frei.</p>}
-        <p className="muted">Münzen gesamt: 🪙 {coins}</p>
+        <p className="muted">Münzen gesamt: 🪙 {coins} – ausgeben im 🛒 Shop</p>
       </div>
 
       <div className="menu-buttons">

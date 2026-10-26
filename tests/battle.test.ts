@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BattleState, BoardCell, CELL_COUNT, applyMove, computeFlips, createBattle, isGameOver, legalMoves, outcome, score,
+  BattleState, BoardCell, CELL_COUNT, applyMove, cardValue, computeFlips, createBattle, isGameOver, legalMoves, outcome, score, toHand,
 } from '../src/game/battle';
 import { chooseCpuMove, drawCpuHand } from '../src/game/ai';
 import { CARDS, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
 
-const H = ['c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08'];
+const H = toHand(['c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08']);
+const hc = (cardId: string, mod = 0) => ({ cardId, mod });
 
 function emptyBoard(): (BoardCell | null)[] {
   return Array(CELL_COUNT).fill(null);
 }
-function cpu(cardId: string): BoardCell {
-  return { cardId, owner: 'cpu', placedBy: 'cpu' };
+function cpu(cardId: string, mod = 0): BoardCell {
+  return { cardId, mod, owner: 'cpu', placedBy: 'cpu' };
 }
 /** State where it is the player's turn and the board is preset. */
-function stateWith(board: (BoardCell | null)[], playerHand: string[]): BattleState {
+function stateWith(board: (BoardCell | null)[], playerHand: (string | { cardId: string; mod: number })[]): BattleState {
   const s = createBattle(H, H, 'player');
-  return { ...s, board, hands: { player: playerHand, cpu: s.hands.cpu } };
+  const hand = playerHand.map((c) => (typeof c === 'string' ? hc(c) : c));
+  return { ...s, board, hands: { player: hand, cpu: s.hands.cpu } };
 }
 
 describe('Kampf-Regeln', () => {
@@ -35,7 +37,7 @@ describe('Kampf-Regeln', () => {
         for (const b of CARDS) {
           const board = emptyBoard();
           board[d.cell] = cpu(b.id);
-          const flips = computeFlips(board, 5, a.id, 'player');
+          const flips = computeFlips(board, 5, hc(a.id), 'player');
           expect(flips.includes(d.cell)).toBe(a[d.mine] > b[d.theirs]);
         }
       }
@@ -73,13 +75,13 @@ describe('Kampf-Regeln', () => {
     const board = emptyBoard();
     board[6] = cpu('c08');
     const next = applyMove(stateWith(board, ['l02']), { handIndex: 0, cell: 5 });
-    expect(next.board[6]).toEqual({ cardId: 'c08', owner: 'player', placedBy: 'cpu' });
+    expect(next.board[6]).toEqual({ cardId: 'c08', mod: 0, owner: 'player', placedBy: 'cpu' });
   });
 
   it('übernimmt nie eigene Karten und verweigert belegte Felder', () => {
     const board = emptyBoard();
-    board[6] = { cardId: 'c12', owner: 'player', placedBy: 'player' };
-    expect(computeFlips(board, 5, 'l04', 'player')).toEqual([]);
+    board[6] = { cardId: 'c12', mod: 0, owner: 'player', placedBy: 'player' };
+    expect(computeFlips(board, 5, hc('l04'), 'player')).toEqual([]);
     expect(() => applyMove(stateWith(board, ['l04']), { handIndex: 0, cell: 6 })).toThrow();
   });
 
@@ -105,18 +107,41 @@ describe('Kampf-Regeln', () => {
     }
   });
 
+  it('geschwächte Karten (−1) haben alle vier Werte um 1 verringert, aber nie unter 1', () => {
+    const c = getCard('c08'); // 3, 7, 2, 5
+    expect(cardValue(hc('c08', -1), 'top')).toBe(c.top - 1);
+    expect(cardValue(hc('c08', -1), 'right')).toBe(c.right - 1);
+    expect(cardValue(hc('c08', -1), 'bottom')).toBe(c.bottom - 1);
+    expect(cardValue(hc('c08', -1), 'left')).toBe(c.left - 1);
+    expect(cardValue(hc('c11', -5), 'top')).toBe(1);
+  });
+
+  it('die Schwächung zählt beim Vergleich – für Angreifer und Verteidiger', () => {
+    // c01 top 5 vs. c11 bottom 7 … use c16 top 7 vs. c12 bottom 5: normally flips.
+    const board = emptyBoard();
+    board[1] = cpu('c12');
+    expect(applyMove(stateWith(board, ['c16']), { handIndex: 0, cell: 5 }).lastFlips).toEqual([1]);
+    // c01 (top 5) beats nothing against c09 bottom 6, but a weakened defender (6-1=5) is a tie → still no flip.
+    board[1] = cpu('c09', -1);
+    expect(applyMove(stateWith(board, ['c01']), { handIndex: 0, cell: 5 }).lastFlips).toEqual([]);
+    // Weakened attacker: c06 top 5 vs. c11 bottom 7 → no; c10 top 7 −1 = 6 vs. c09 bottom 6 → tie, no flip.
+    board[1] = cpu('c09');
+    expect(applyMove(stateWith(board, [hc('c10', -1)]), { handIndex: 0, cell: 5 }).lastFlips).toEqual([]);
+    expect(applyMove(stateWith(board, ['c10']), { handIndex: 0, cell: 5 }).lastFlips).toEqual([1]);
+  });
+
   it('8:8 ist unentschieden', () => {
     const s = createBattle(H, H);
     const board = Array.from({ length: 16 }, (_, i): BoardCell => ({
-      cardId: 'c01', owner: i < 8 ? 'player' : 'cpu', placedBy: 'player',
+      cardId: 'c01', mod: 0, owner: i < 8 ? 'player' : 'cpu', placedBy: 'player',
     }));
     expect(outcome({ ...s, board, moveCount: 16 })).toBe('draw');
   });
 
   it('Computer bevorzugt eine unmittelbare Übernahme', () => {
     const board = emptyBoard();
-    board[0] = { cardId: 'c11', owner: 'player', placedBy: 'player' }; // c11 right = 4
-    const s: BattleState = { ...createBattle(H, H, 'cpu'), board, hands: { player: H, cpu: ['c02', 'l02'] } };
+    board[0] = { cardId: 'c11', mod: 0, owner: 'player', placedBy: 'player' }; // c11 right = 4
+    const s: BattleState = { ...createBattle(H, H, 'cpu'), board, hands: { player: H, cpu: toHand(['c02', 'l02']) } };
     const move = chooseCpuMove(s, createRng(3));
     const next = applyMove(s, move);
     expect(next.lastFlips.length).toBeGreaterThan(0);
@@ -124,6 +149,6 @@ describe('Kampf-Regeln', () => {
 
   it('Computerhand hat 8 unterschiedliche Karten', () => {
     const hand = drawCpuHand(createRng(9));
-    expect(new Set(hand).size).toBe(8);
+    expect(new Set(hand.map((c) => c.cardId)).size).toBe(8);
   });
 });

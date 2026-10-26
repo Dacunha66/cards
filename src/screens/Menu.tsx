@@ -5,7 +5,7 @@ interface Props {
   save: SaveData;
   saveOk: boolean;
   onPlay: () => void;
-  onNavigate: (screen: 'collection' | 'deck' | 'rules') => void;
+  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop') => void;
   onToggleReducedMotion: () => void;
 }
 
@@ -29,6 +29,7 @@ export function Menu({ save, saveOk, onPlay, onNavigate, onToggleReducedMotion }
 
       <nav className="menu-buttons">
         <button type="button" className="btn btn-primary btn-big" onClick={onPlay}>▶ Spielen</button>
+        <button type="button" className="btn" onClick={() => onNavigate('shop')}>🛒 Shop <span className="btn-sub">🪙 {save.coins}</span></button>
         <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
         <button type="button" className="btn" onClick={() => onNavigate('deck')}>🗂️ Deck bearbeiten</button>
         <button type="button" className="btn" onClick={() => onNavigate('rules')}>📜 Regeln</button>

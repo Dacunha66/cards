@@ -1,6 +1,21 @@
-# Testprotokoll – MVP 1.0
+# Testprotokoll
 
-## Automatische Tests (`npm test`, Vitest) – 28 Tests, alle bestanden
+## Version 1.1 (Feedback-Runde 1)
+
+Änderungen: Lauf langsamer (ca. 40 s statt 36 s), Stolpersteine schwächen die nächste Karte um 1, Kartenshop mit Booster-Packs und Skins.
+
+**Neue automatische Tests (insgesamt 44, alle bestanden)**
+- Geschwächte Karten: alle vier Werte −1, nie unter 1; die Schwächung zählt beim Angreifen und Verteidigen
+- Stolperstein schwächt genau die nächste Karte; Ausweichen ergibt keine Schwächung (20 Läufe); immer in Steine laufen ergibt trotzdem 8 Karten mit höchstens −1
+- Steine und Tore werden auch nach einem langen Ruckler in der richtigen Reihenfolge ausgewertet (dieser Fehler wurde durch den Test gefunden und behoben)
+- Booster-Packs: 3 verschiedene Karten, Helden-Pack garantiert episch oder legendär (300 Packs), Münzabzug, Freischaltung, Erstattung für Doppelte, kein Kauf ohne genug Münzen, ganze Sammlung erreichbar
+- Skins: Kauf, kein Doppelkauf, Ausrüsten nur wenn gekauft, Speichern/Laden, manipulierte Daten, alte Spielstände ohne Skins laden weiter
+
+**Browser-Durchlauf (Chromium, iPhone-Größe):** Shop → Helden-Pack öffnen → zwei Skins kaufen → normaler Lauf (ca. 41 s inkl. Start) mit absichtlichem Stein-Treffer → geschwächte Karte (−1) im Duell sichtbar. Münzstand nach jedem Schritt korrekt, keine JavaScript-Fehler.
+
+## MVP 1.0
+
+### Automatische Tests (`npm test`, Vitest) – 28 Tests, alle bestanden
 
 **Kampf (`tests/battle.test.ts`)**
 - Vergleich in alle 4 Richtungen (oben/rechts/unten/links), jeweils für **alle 40×40 Kartenpaare**: Übernahme genau dann, wenn der eigene Wert strikt größer ist
@@ -19,7 +34,7 @@
 - Genau 8 Auswahlen pro Lauf, egal wie gelenkt wird und bei normaler oder schneller Geschwindigkeit (30 Läufe); danach keine weiteren Auswahlen
 - Die Karte der aktuellen Spur wird genommen
 - Ein großer Zeitsprung und „Überspringen“ (auch doppelt) liefern genau 8 Karten
-- Laufdauer bei normaler Geschwindigkeit: 30–45 Sekunden (berechnet ca. 36 s plus 1 s Start)
+- Laufdauer bei normaler Geschwindigkeit: 30–45 Sekunden (seit 1.1: berechnet ca. 39,5 s plus 1 s Start)
 - 40 Karten mit eindeutigen IDs und Namen, Werte 1–10
 
 **Speichern & Belohnung (`tests/storage.test.ts`)**
@@ -37,7 +52,6 @@ Hauptmenü → Sammlung → Deck → Lauf (Spurwechsel, schneller Modus, Übersp
 ## Noch nicht getestet / offen
 - **Nicht auf echtem iPhone/iPad in Safari getestet.** Die Tests liefen in Chromium mit simulierter Bildschirmgröße. Bitte auf deinen Geräten prüfen.
 - Wischgesten wurden nur über die Buttons ◀ ▶ automatisiert getestet, Wischen per Finger noch nicht auf einem echten Gerät.
-- Münzen haben noch keinen Verwendungszweck (z. B. Shop), das ist eine spätere kreative Entscheidung.
 - Kein Ton, keine Musik.
 - Balance (Kartenwerte, Stärke des Computers) ist ein erster Entwurf.
 - Kein Konto und keine geräteübergreifende Sicherung (bewusst nicht im MVP).

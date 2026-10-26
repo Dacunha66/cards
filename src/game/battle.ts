@@ -7,8 +7,26 @@ export const BOARD_SIZE = 4;
 export const CELL_COUNT = BOARD_SIZE * BOARD_SIZE;
 export const HAND_SIZE = 8;
 
-export interface BoardCell {
+export type Dir = 'top' | 'right' | 'bottom' | 'left';
+
+/** A card instance in a hand or on the board. `mod` is added to all four values (e.g. -1 after a stumble). */
+export interface HandCard {
   cardId: string;
+  mod: number;
+}
+
+export const MIN_VALUE = 1;
+
+/** Effective directional value, never below 1. */
+export function cardValue(card: HandCard, dir: Dir): number {
+  return Math.max(MIN_VALUE, getCard(card.cardId)[dir] + card.mod);
+}
+
+export function toHand(ids: string[]): HandCard[] {
+  return ids.map((cardId) => ({ cardId, mod: 0 }));
+}
+
+export interface BoardCell extends HandCard {
   owner: Side;
   /** Who originally played the card. */
   placedBy: Side;
@@ -16,7 +34,7 @@ export interface BoardCell {
 
 export interface BattleState {
   board: (BoardCell | null)[];
-  hands: Record<Side, string[]>;
+  hands: Record<Side, HandCard[]>;
   turn: Side;
   moveCount: number;
   /** Cells flipped by the most recent move (for animations). */
@@ -33,13 +51,13 @@ export function other(side: Side): Side {
   return side === 'player' ? 'cpu' : 'player';
 }
 
-export function createBattle(playerHand: string[], cpuHand: string[], first: Side = 'player'): BattleState {
+export function createBattle(playerHand: HandCard[], cpuHand: HandCard[], first: Side = 'player'): BattleState {
   if (playerHand.length !== HAND_SIZE || cpuHand.length !== HAND_SIZE) {
     throw new Error(`Each side needs exactly ${HAND_SIZE} cards`);
   }
   return {
     board: Array<BoardCell | null>(CELL_COUNT).fill(null),
-    hands: { player: [...playerHand], cpu: [...cpuHand] },
+    hands: { player: playerHand.map((c) => ({ ...c })), cpu: cpuHand.map((c) => ({ ...c })) },
     turn: first,
     moveCount: 0,
     lastFlips: [],
@@ -55,7 +73,7 @@ const DIRS = [
   { dr: 0, dc: -1, mine: 'left', theirs: 'right' },
 ] as const;
 
-export function neighbours(cell: number): { cell: number; mine: 'top' | 'right' | 'bottom' | 'left'; theirs: 'top' | 'right' | 'bottom' | 'left' }[] {
+export function neighbours(cell: number): { cell: number; mine: Dir; theirs: Dir }[] {
   const r = Math.floor(cell / BOARD_SIZE);
   const c = cell % BOARD_SIZE;
   const out = [];
@@ -69,15 +87,13 @@ export function neighbours(cell: number): { cell: number; mine: 'top' | 'right' 
   return out;
 }
 
-/** Cells that would be captured if `cardId` owned by `side` were placed on `cell`. */
-export function computeFlips(board: (BoardCell | null)[], cell: number, cardId: string, side: Side): number[] {
-  const card = getCard(cardId);
+/** Cells that would be captured if `card` owned by `side` were placed on `cell`. */
+export function computeFlips(board: (BoardCell | null)[], cell: number, card: HandCard, side: Side): number[] {
   const flips: number[] = [];
   for (const n of neighbours(cell)) {
     const target = board[n.cell];
     if (!target || target.owner === side) continue;
-    const theirCard = getCard(target.cardId);
-    if (card[n.mine] > theirCard[n.theirs]) flips.push(n.cell);
+    if (cardValue(card, n.mine) > cardValue(target, n.theirs)) flips.push(n.cell);
   }
   return flips;
 }
@@ -106,10 +122,10 @@ export function applyMove(state: BattleState, move: Move): BattleState {
   if (!isLegalMove(state, move)) throw new Error('Illegal move');
   const side = state.turn;
   const hand = [...state.hands[side]];
-  const [cardId] = hand.splice(move.handIndex, 1);
-  const flips = computeFlips(state.board, move.cell, cardId, side);
+  const [card] = hand.splice(move.handIndex, 1);
+  const flips = computeFlips(state.board, move.cell, card, side);
   const board = [...state.board];
-  board[move.cell] = { cardId, owner: side, placedBy: side };
+  board[move.cell] = { ...card, owner: side, placedBy: side };
   for (const f of flips) board[f] = { ...board[f]!, owner: side };
   return {
     board,

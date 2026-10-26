@@ -12,7 +12,7 @@ export function Rules({ onBack }: { onBack: () => void }) {
           <li><b>Silberner Rahmen</b> – Karte aus deinem Deck</li>
           <li><b>Goldener Rahmen „NEU“</b> – Entdeckung aus dem restlichen Kartenpool</li>
         </ul>
-        <p>Steine sind nur Deko – sie halten dich nicht auf. Mit ⏩ läufst du schneller.</p>
+        <p><b>Stolpersteine</b> halten dich nicht auf, aber die <b>nächste Karte</b>, die du danach nimmst, ist im Duell um <b>1 schwächer</b> (alle vier Werte, mindestens 1). Weiche ihnen aus! Mit ⏩ läufst du schneller.</p>
 
         <h2>2 · Das Duell</h2>
         <p>Ein 4×4-Feld, du und der Computer habt je 8 Karten und legt abwechselnd eine Karte auf ein freies Feld.</p>
@@ -23,6 +23,9 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <h2>3 · Belohnung</h2>
         <p>Sieg: 🪙 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es 🪙 50 extra.</p>
         <p>Unentschieden: 🪙 40 · Niederlage: 🪙 15</p>
+
+        <h2>Shop</h2>
+        <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte in Münzen umgetauscht) und <b>Skins</b>, die nur das Aussehen ändern.</p>
 
         <h2>Deck</h2>
         <p>Dein Deck besteht aus genau 20 verschiedenen Karten aus deiner Sammlung.</p>

@@ -10,9 +10,11 @@ import { Rules } from './screens/Rules';
 import { Runner } from './screens/Runner';
 import { Battle } from './screens/Battle';
 import { Result } from './screens/Result';
+import { Shop, skinStyle } from './screens/Shop';
+import { getSkin } from './game/skins';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' }
   | { name: 'runner'; runId: number }
   | { name: 'battle'; picks: Pick[] }
   | { name: 'result'; outcome: Outcome; reward: Reward; score: { player: number; cpu: number } };
@@ -49,7 +51,7 @@ export function App() {
   };
 
   return (
-    <div className="app">
+    <div className="app" style={skinStyle(getSkin(save.skins.card).colors)}>
       {screen.name === 'menu' && (
         <Menu
           save={save}
@@ -66,12 +68,14 @@ export function App() {
         <DeckEditor save={save} onSave={(deck) => setSave((s) => ({ ...s, deck }))} onBack={toMenu} />
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} />}
+      {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} />}
       {screen.name === 'runner' && (
         <Runner
           key={screen.runId}
           deck={save.deck}
           unlocked={save.unlocked}
           reducedMotion={reducedMotion}
+          skin={getSkin(save.skins.runner).colors}
           onFinish={(picks) => setScreen({ name: 'battle', picks })}
           onQuit={toMenu}
         />

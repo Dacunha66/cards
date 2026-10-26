@@ -17,29 +17,33 @@ interface Props {
   className?: string;
   onClick?: () => void;
   ariaLabel?: string;
+  /** Added to all four values (e.g. -1 after a stumble); values never drop below 1. */
+  mod?: number;
 }
 
 
-export function Card({ id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel }: Props) {
+export function Card({ id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0 }: Props) {
   const c = getCard(id);
+  const v = (n: number) => Math.max(1, n + mod);
   const style = { '--hue': c.hue } as CSSProperties;
   const classes = [
     'card', `card-${size}`, `rarity-${c.rarity}`,
     owner ? `owner-${owner}` : '', locked ? 'locked' : '', selected ? 'selected' : '',
-    badge === 'discovery' ? 'discovery' : '', className,
+    badge === 'discovery' ? 'discovery' : '', mod < 0 ? 'weakened' : '', className,
   ].join(' ');
   const label = ariaLabel ?? (locked
     ? `Gesperrte Karte, ${RARITY_LABEL[c.rarity]}`
-    : `${c.name}, ${RARITY_LABEL[c.rarity]}, oben ${c.top}, rechts ${c.right}, unten ${c.bottom}, links ${c.left}`);
+    : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}, oben ${v(c.top)}, rechts ${v(c.right)}, unten ${v(c.bottom)}, links ${v(c.left)}`);
   const content = (
     <>
-      <span className="v v-top">{locked ? '?' : c.top}</span>
-      <span className="v v-left">{locked ? '?' : c.left}</span>
+      <span className="v v-top">{locked ? '?' : v(c.top)}</span>
+      <span className="v v-left">{locked ? '?' : v(c.left)}</span>
       <span className="art" aria-hidden="true">{locked ? '🔒' : c.art}</span>
-      <span className="v v-right">{locked ? '?' : c.right}</span>
-      <span className="v v-bottom">{locked ? '?' : c.bottom}</span>
+      <span className="v v-right">{locked ? '?' : v(c.right)}</span>
+      <span className="v v-bottom">{locked ? '?' : v(c.bottom)}</span>
       <span className="gem" aria-hidden="true" />
       {badge === 'discovery' && <span className="badge">{badgeText}</span>}
+      {mod < 0 && <span className="mod-tag">{mod}</span>}
       {showName && <span className="name">{locked ? '???' : c.name}</span>}
     </>
   );

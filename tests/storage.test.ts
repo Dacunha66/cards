@@ -55,7 +55,7 @@ describe('Speichern & Laden', () => {
 
 describe('Belohnungen', () => {
   const unlocked = defaultSave().unlocked;
-  const pick = (cardId: string, kind: 'deck' | 'discovery', gate = 0) => ({ cardId, kind, gate });
+  const pick = (cardId: string, kind: 'deck' | 'discovery', gate = 0) => ({ cardId, kind, gate, mod: 0 });
 
   it('Sieg schaltet höchstens eine neue entdeckte Karte frei (die seltenste)', () => {
     const r = computeReward('win', [pick('e01', 'discovery'), pick('l03', 'discovery', 1), pick('c01', 'deck', 2)], unlocked);

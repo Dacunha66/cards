@@ -5,8 +5,10 @@ import { Rng, randInt, shuffle } from './rng';
 export const LANES = 3;
 export const GATE_COUNT = 8;
 export const FIRST_GATE = 28;
-export const GATE_SPACING = 44;
-export const BASE_SPEED = 10; // units per second → ~36 s for a full run
+export const GATE_SPACING = 40;
+export const BASE_SPEED = 8; // units per second → ~40 s for a full run
+/** Value penalty for the next card after hitting a stumbling stone. */
+export const STUMBLE_PENALTY = -1;
 export const FINISH_DISTANCE = FIRST_GATE + GATE_SPACING * (GATE_COUNT - 1) + 8;
 
 export type OfferKind = 'deck' | 'discovery';
@@ -30,10 +32,12 @@ export interface Obstacle {
 
 export interface Pick extends Offer {
   gate: number;
+  /** Added to all four values in the duel (0 or STUMBLE_PENALTY). */
+  mod: number;
 }
 
 export type RunnerEvent =
-  | { type: 'pick'; gate: number; lane: number; offer: Offer }
+  | { type: 'pick'; gate: number; lane: number; offer: Offer; mod: number }
   | { type: 'bump'; lane: number }
   | { type: 'finish' };
 
@@ -56,7 +60,7 @@ export function generateGates(deck: string[], rng: Rng): Gate[] {
   return gates;
 }
 
-/** Purely cosmetic rocks between gates – they never block a pick. */
+/** Stumbling stones between gates: hitting one weakens the next card, but never blocks a pick. */
 export function generateObstacles(rng: Rng): Obstacle[] {
   const obstacles: Obstacle[] = [];
   for (let i = 0; i < GATE_COUNT; i++) {
@@ -73,6 +77,8 @@ export class RunnerSim {
   readonly gates: Gate[];
   readonly obstacles: Obstacle[];
   finished = false;
+  /** True after hitting a stone until the next card is taken. */
+  stumbled = false;
   private nextGate = 0;
   private nextObstacle = 0;
 
@@ -96,12 +102,24 @@ export class RunnerSim {
     if (this.finished) return [];
     const events: RunnerEvent[] = [];
     this.distance += Math.max(0, dt) * BASE_SPEED * speedMultiplier;
-    while (this.nextObstacle < this.obstacles.length && this.distance >= this.obstacles[this.nextObstacle].distance) {
-      const o = this.obstacles[this.nextObstacle++];
-      if (o.lane === this.lane) events.push({ type: 'bump', lane: o.lane });
-    }
-    while (this.nextGate < this.gates.length && this.distance >= this.gates[this.nextGate].distance) {
-      events.push(this.takeGate(this.gates[this.nextGate++]));
+    // Handle stones and gates strictly in track order, even after a long frame.
+    for (;;) {
+      const o = this.obstacles[this.nextObstacle];
+      const g = this.gates[this.nextGate];
+      const oDue = o !== undefined && this.distance >= o.distance;
+      const gDue = g !== undefined && this.distance >= g.distance;
+      if (oDue && (!gDue || o.distance < g.distance)) {
+        this.nextObstacle++;
+        if (o.lane === this.lane) {
+          this.stumbled = true;
+          events.push({ type: 'bump', lane: o.lane });
+        }
+      } else if (gDue) {
+        this.nextGate++;
+        events.push(this.takeGate(g));
+      } else {
+        break;
+      }
     }
     if (this.nextGate >= this.gates.length && this.distance >= FINISH_DISTANCE) {
       this.finished = true;
@@ -129,7 +147,9 @@ export class RunnerSim {
 
   private takeGate(gate: Gate): RunnerEvent {
     const offer = gate.offers[this.lane];
-    this.picks.push({ ...offer, gate: gate.index });
-    return { type: 'pick', gate: gate.index, lane: this.lane, offer };
+    const mod = this.stumbled ? STUMBLE_PENALTY : 0;
+    this.stumbled = false;
+    this.picks.push({ ...offer, gate: gate.index, mod });
+    return { type: 'pick', gate: gate.index, lane: this.lane, offer, mod };
   }
 }

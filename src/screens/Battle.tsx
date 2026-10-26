@@ -18,7 +18,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
   const rng = useMemo(() => createRng(), []);
   const [state, setState] = useState<BattleState>(() => {
     const first: Side = rng() < 0.5 ? 'player' : 'cpu';
-    return createBattle(picks.map((p) => p.cardId), drawCpuHand(rng), first);
+    return createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), drawCpuHand(rng), first);
   });
   const [selected, setSelected] = useState<number | null>(null);
   const [banner, setBanner] = useState<string | null>(state.turn === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!');
@@ -107,6 +107,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
                 <Card
                   key={`${cell.cardId}-${cell.owner}`}
                   id={cell.cardId}
+                  mod={cell.mod}
                   owner={cell.owner}
                   size="sm"
                   className={flipped ? 'anim-flip' : placed ? 'anim-drop' : ''}
@@ -127,10 +128,11 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
       <p className="hint" aria-live="polite">{hint}</p>
 
       <div className="hand" aria-label="Deine Hand">
-        {state.hands.player.map((id, i) => (
+        {state.hands.player.map(({ cardId: id, mod }, i) => (
           <Card
             key={handOrigin[i]}
             id={id}
+            mod={mod}
             owner="player"
             size="sm"
             badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}

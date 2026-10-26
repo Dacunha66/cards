@@ -3,12 +3,14 @@ import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { getCard } from '../game/cards';
 import { createRng } from '../game/rng';
-import { GATE_COUNT, LANES, Pick, RunnerEvent, RunnerSim } from '../game/runner';
+import { GATE_COUNT, LANES, Pick, RunnerEvent, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
 
 interface Props {
   deck: string[];
   unlocked: string[];
   reducedMotion: boolean;
+  /** Runner skin colours: main, dark, light. */
+  skin: [string, string, string];
   onFinish: (picks: Pick[]) => void;
   onQuit: () => void;
 }
@@ -17,6 +19,7 @@ interface Flying {
   key: number;
   cardId: string;
   discovery: boolean;
+  mod: number;
   from: { x: number; y: number };
   slot: number;
 }
@@ -25,7 +28,7 @@ const VIEW_DISTANCE = 80;
 const PERSPECTIVE = 10;
 const FAST = 3.5;
 
-export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Props) {
+export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }: Props) {
   const sim = useMemo(() => new RunnerSim(deck, createRng()), [deck]);
   const owned = useMemo(() => new Set(unlocked), [unlocked]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,6 +39,7 @@ export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Prop
   const [fast, setFast] = useState(false);
   const [phase, setPhase] = useState<'ready' | 'run' | 'done'>('ready');
   const [toast, setToast] = useState<string | null>(null);
+  const [stumbled, setStumbled] = useState(false);
   const fastRef = useRef(false);
   const phaseRef = useRef(phase);
   const view = useRef({ laneX: 1, shake: 0, bob: 0, w: 0, h: 0 });
@@ -58,14 +62,17 @@ export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Prop
     for (const e of events) {
       if (e.type === 'pick') {
         const at = project(1.2, e.lane);
-        setPicks((prev) => [...prev, { ...e.offer, gate: e.gate }]);
+        setPicks((prev) => [...prev, { ...e.offer, gate: e.gate, mod: e.mod }]);
+        setStumbled(false);
         setFlying((prev) => [...prev, {
-          key: e.gate, cardId: e.offer.cardId, discovery: e.offer.kind === 'discovery', from: { x: at.x, y: at.y - 60 * at.p }, slot: e.gate,
+          key: e.gate, cardId: e.offer.cardId, discovery: e.offer.kind === 'discovery', mod: e.mod, from: { x: at.x, y: at.y - 60 * at.p }, slot: e.gate,
         }]);
-        if (e.offer.kind === 'discovery') setToast(`Entdeckung: ${getCard(e.offer.cardId).name}!`);
+        if (e.mod < 0) setToast(`${getCard(e.offer.cardId).name} ist geschwächt (${e.mod})`);
+        else if (e.offer.kind === 'discovery') setToast(`Entdeckung: ${getCard(e.offer.cardId).name}!`);
       } else if (e.type === 'bump') {
         view.current.shake = 0.35;
-        setToast('Stolperstein! (kein Problem)');
+        setStumbled(true);
+        setToast(`Stolperstein! Nächste Karte ${STUMBLE_PENALTY}`);
       } else if (e.type === 'finish') {
         setPhase('done');
       }
@@ -119,7 +126,7 @@ export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Prop
       v.laneX += (sim.lane - v.laneX) * k;
       v.shake = Math.max(0, v.shake - dt);
       if (phaseRef.current === 'run' && !reducedMotion) v.bob += dt * (fastRef.current ? 22 : 12);
-      draw(ctx, sim, v, project, owned, reducedMotion);
+      draw(ctx, sim, v, project, owned, reducedMotion, skin);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -127,7 +134,7 @@ export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Prop
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
     };
-  }, [sim, handleEvents, project, owned, reducedMotion]);
+  }, [sim, handleEvents, project, owned, reducedMotion, skin]);
 
   const move = useCallback((dir: -1 | 1) => {
     if (phaseRef.current !== 'done') sim.moveLane(dir);
@@ -170,7 +177,7 @@ export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Prop
     <main className="screen runner">
       <header className="runner-hud">
         <ConfirmButton label="✕" ariaLabel="Lauf abbrechen" confirmLabel="Abbrechen?" onConfirm={onQuit} />
-        <span className="pill">Tor {Math.min(picks.length + 1, GATE_COUNT)}/{GATE_COUNT}</span>
+        <span className={`pill ${stumbled ? 'pill-warn' : ''}`}>{stumbled ? `⚠ ${STUMBLE_PENALTY}` : `Tor ${Math.min(picks.length + 1, GATE_COUNT)}/${GATE_COUNT}`}</span>
         <button type="button" className={`btn btn-small ${fast ? 'active' : ''}`} onClick={() => setFast(!fast)} aria-pressed={fast}>
           ⏩ {fast ? '3×' : '1×'}
         </button>
@@ -192,6 +199,7 @@ export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Prop
         <div className="legend" aria-hidden="true">
           <span><i className="dot silver" /> Deck</span>
           <span><i className="dot gold" /> Entdeckung</span>
+          <span><i className="dot stone" /> Stein: −1</span>
         </div>
       </div>
 
@@ -199,7 +207,7 @@ export function Runner({ deck, unlocked, reducedMotion, onFinish, onQuit }: Prop
         {Array.from({ length: GATE_COUNT }, (_, i) => (
           <div key={i} className="slot" ref={(el) => { slotRefs.current[i] = el; }}>
             {picks[i] && !flying.some((f) => f.slot === i) && (
-              <Card id={picks[i].cardId} owner="player" size="xs" badge={picks[i].kind === 'discovery' ? 'discovery' : null} />
+              <Card id={picks[i].cardId} mod={picks[i].mod} owner="player" size="xs" badge={picks[i].kind === 'discovery' ? 'discovery' : null} />
             )}
           </div>
         ))}
@@ -257,7 +265,7 @@ function FlyingCard({ flying, stage, target, reducedMotion, onDone }: {
   }, [flying, stage, target, reducedMotion]);
   return (
     <div ref={ref} className="flying-card" aria-hidden="true">
-      <Card id={flying.cardId} owner="player" size="sm" badge={flying.discovery ? 'discovery' : null} />
+      <Card id={flying.cardId} mod={flying.mod} owner="player" size="sm" badge={flying.discovery ? 'discovery' : null} />
     </div>
   );
 }
@@ -273,6 +281,7 @@ function draw(
   project: Project,
   owned: Set<string>,
   reducedMotion: boolean,
+  skin: [string, string, string],
 ) {
   const { w, h } = v;
   ctx.save();
@@ -389,8 +398,8 @@ function draw(
   ctx.fill();
   // Cloak.
   const cloak = ctx.createLinearGradient(pp.x, py - 60, pp.x, py);
-  cloak.addColorStop(0, '#7cc4ff');
-  cloak.addColorStop(1, '#2563eb');
+  cloak.addColorStop(0, skin[0]);
+  cloak.addColorStop(1, skin[1]);
   ctx.fillStyle = cloak;
   ctx.beginPath();
   ctx.moveTo(pp.x, py - 58);
@@ -403,8 +412,8 @@ function draw(
   ctx.arc(pp.x, py - 58, 11, 0, Math.PI * 2);
   ctx.fill();
   // Card held above head.
-  ctx.fillStyle = '#fff';
-  ctx.strokeStyle = '#2563eb';
+  ctx.fillStyle = skin[2];
+  ctx.strokeStyle = skin[1];
   ctx.lineWidth = 2;
   roundRect(ctx, pp.x - 7, py - 92, 14, 19, 3);
   ctx.fill();
@@ -414,12 +423,16 @@ function draw(
 }
 
 function drawRock(ctx: CanvasRenderingContext2D, at: { x: number; y: number; p: number }) {
-  const r = 26 * at.p;
-  ctx.fillStyle = '#5b5f73';
+  const r = 34 * at.p;
+  ctx.fillStyle = 'rgba(239,68,68,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(at.x, at.y - r * 0.1, r * 1.25, r * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#6b7086';
   ctx.beginPath();
   ctx.ellipse(at.x, at.y - r * 0.5, r, r * 0.65, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#7d8197';
+  ctx.fillStyle = '#9ea3ba';
   ctx.beginPath();
   ctx.ellipse(at.x - r * 0.3, at.y - r * 0.75, r * 0.4, r * 0.25, 0, 0, Math.PI * 2);
   ctx.fill();

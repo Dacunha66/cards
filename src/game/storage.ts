@@ -1,5 +1,6 @@
 // Progress is stored only in this browser (localStorage) – no account, no cloud backup.
 import { DECK_SIZE, STARTER_DECK, STARTING_UNLOCKED, isCardId } from './cards';
+import { DEFAULT_SKINS, getSkin, isSkinId } from './skins';
 
 export interface SaveData {
   version: 1;
@@ -8,6 +9,8 @@ export interface SaveData {
   coins: number;
   stats: { wins: number; draws: number; losses: number; runs: number };
   settings: { reducedMotion: boolean };
+  /** Owned and equipped skins (one per kind). */
+  skins: { owned: string[]; card: string; runner: string };
 }
 
 export const SAVE_KEY = 'project-card-rush/save-v1';
@@ -25,6 +28,7 @@ export function defaultSave(): SaveData {
     coins: 0,
     stats: { wins: 0, draws: 0, losses: 0, runs: 0 },
     settings: { reducedMotion: false },
+    skins: { owned: [DEFAULT_SKINS.card, DEFAULT_SKINS.runner], card: DEFAULT_SKINS.card, runner: DEFAULT_SKINS.runner },
   };
 }
 
@@ -47,6 +51,11 @@ export function sanitize(raw: unknown): SaveData {
     : base.unlocked;
   const deck = Array.isArray(r.deck) && isValidDeck(r.deck, unlocked) ? [...r.deck] : [...STARTER_DECK];
   const s = r.stats && typeof r.stats === 'object' ? r.stats : {};
+  const owned = [...new Set([...base.skins.owned, ...(Array.isArray(r.skins?.owned) ? r.skins.owned.filter(isSkinId) : [])])];
+  const equipped = (kind: 'card' | 'runner') => {
+    const id = r.skins?.[kind];
+    return isSkinId(id) && owned.includes(id) && getSkin(id).kind === kind ? id : DEFAULT_SKINS[kind];
+  };
   return {
     version: 1,
     unlocked,
@@ -54,6 +63,7 @@ export function sanitize(raw: unknown): SaveData {
     coins: num(r.coins),
     stats: { wins: num(s.wins), draws: num(s.draws), losses: num(s.losses), runs: num(s.runs) },
     settings: { reducedMotion: Boolean(r.settings?.reducedMotion) },
+    skins: { owned, card: equipped('card'), runner: equipped('runner') },
   };
 }
 
