@@ -28,6 +28,10 @@ export interface CardRecord {
   status: CardStatus;
   /** Asset id of the uploaded picture, or null. */
   imageId: string | null;
+  /** May be offered as a new card in the runner's final gate. */
+  inRunner: boolean;
+  /** Only obtainable as a duel reward (never in booster packs). */
+  rewardOnly: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +70,9 @@ export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
     description: typeof r.description === 'string' ? r.description.trim().slice(0, DESCRIPTION_MAX) : '',
     status: STATUSES.includes(r.status as CardStatus) ? (r.status as CardStatus) : 'draft',
     imageId: typeof r.imageId === 'string' && ASSET_RE.test(r.imageId) ? r.imageId : null,
+    // Older documents have no flags: they keep the previous behaviour.
+    inRunner: r.inRunner !== false,
+    rewardOnly: r.rewardOnly === true,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : '',
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : '',
   };
@@ -95,6 +102,8 @@ export function recordToCard(rec: CardRecord): CardDef {
     hue: rec.hue,
     image: imageUrl(rec.imageId),
     description: rec.description || undefined,
+    inRunner: rec.inRunner,
+    rewardOnly: rec.rewardOnly,
   };
 }
 
@@ -102,7 +111,8 @@ export function recordToCard(rec: CardRecord): CardDef {
 export function builtinRecords(now = new Date().toISOString()): CardRecord[] {
   return BUILTIN_CARDS.map((c) => ({
     id: c.id, name: c.name, rarity: c.rarity, top: c.top, right: c.right, bottom: c.bottom, left: c.left,
-    art: c.art, hue: c.hue, description: c.description ?? '', status: 'active', imageId: null, createdAt: now, updatedAt: now,
+    art: c.art, hue: c.hue, description: c.description ?? '', status: 'active', imageId: null, inRunner: true, rewardOnly: false,
+    createdAt: now, updatedAt: now,
   }));
 }
 
@@ -119,7 +129,7 @@ export function nextCardId(existing: Iterable<string>): string {
 export function newRecord(id: string, now = new Date().toISOString()): CardRecord {
   return {
     id, name: '', rarity: 'common', top: 4, right: 4, bottom: 4, left: 4,
-    art: '🃏', hue: 260, description: '', status: 'draft', imageId: null, createdAt: now, updatedAt: now,
+    art: '🃏', hue: 260, description: '', status: 'draft', imageId: null, inRunner: true, rewardOnly: false, createdAt: now, updatedAt: now,
   };
 }
 
@@ -164,7 +174,9 @@ export function repairDeck(deck: string[], unlocked: string[], activeCards: read
   }
   const newUnlocked = [...unlocked];
   if (result.length < DECK_SIZE) {
-    const starterFirst = [...STARTER_DECK.filter((id) => active.has(id)).map((id) => active.get(id)!), ...[...activeCards].sort((a, b) => -byStrength(a, b))];
+    // Reward-only cards are never handed out for free.
+    const giftable = (c: CardDef) => !c.rewardOnly;
+    const starterFirst = [...STARTER_DECK.filter((id) => active.has(id)).map((id) => active.get(id)!), ...[...activeCards].sort((a, b) => -byStrength(a, b))].filter(giftable);
     for (const c of starterFirst) {
       if (result.length >= DECK_SIZE) break;
       if (result.includes(c.id)) continue;
@@ -183,4 +195,58 @@ export function powerHint(rec: Pick<CardRecord, ValueKey | 'rarity'>): { sum: nu
   const sum = rec.top + rec.right + rec.bottom + rec.left;
   const [min, max] = RARITY_POWER[rec.rarity];
   return { sum, min, max, ok: sum >= min && sum <= max };
+}
+
+/** A card counts as conspicuous when its total differs this much from the average of its rarity. */
+export const OUTLIER_THRESHOLD = 3;
+
+export interface RarityStats { count: number; avg: number; min: number; max: number }
+export interface CardBalance {
+  sum: number;
+  /** Average total of the other active cards of the same rarity (null if there are none). */
+  avg: number | null;
+  /** sum − avg, rounded to one decimal. */
+  diff: number;
+  flag: 'strong' | 'weak' | null;
+}
+
+export function cardSum(r: Pick<CardRecord, ValueKey>): number {
+  return r.top + r.right + r.bottom + r.left;
+}
+
+/**
+ * Strength overview: per-rarity statistics of the active cards, and for every card how far its
+ * total is from the other active cards of the same rarity.
+ */
+export function balanceReport(records: CardRecord[]): { stats: Record<Rarity, RarityStats>; cards: Map<string, CardBalance> } {
+  const stats = Object.fromEntries(RARITIES.map((r) => [r, { count: 0, avg: 0, min: 0, max: 0 }])) as Record<Rarity, RarityStats>;
+  const sums = new Map<Rarity, { id: string; sum: number }[]>();
+  for (const rec of records) {
+    if (rec.status !== 'active') continue;
+    const list = sums.get(rec.rarity) ?? [];
+    list.push({ id: rec.id, sum: cardSum(rec) });
+    sums.set(rec.rarity, list);
+  }
+  for (const [rarity, list] of sums) {
+    const values = list.map((x) => x.sum);
+    stats[rarity] = {
+      count: list.length,
+      avg: Math.round((values.reduce((a, b) => a + b, 0) / list.length) * 10) / 10,
+      min: Math.min(...values),
+      max: Math.max(...values),
+    };
+  }
+  const cards = new Map<string, CardBalance>();
+  for (const rec of records) {
+    const sum = cardSum(rec);
+    const others = (sums.get(rec.rarity) ?? []).filter((x) => x.id !== rec.id);
+    if (others.length === 0) {
+      cards.set(rec.id, { sum, avg: null, diff: 0, flag: null });
+      continue;
+    }
+    const avg = others.reduce((a, x) => a + x.sum, 0) / others.length;
+    const diff = Math.round((sum - avg) * 10) / 10;
+    cards.set(rec.id, { sum, avg: Math.round(avg * 10) / 10, diff, flag: diff >= OUTLIER_THRESHOLD ? 'strong' : diff <= -OUTLIER_THRESHOLD ? 'weak' : null });
+  }
+  return { stats, cards };
 }

@@ -4,7 +4,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
-import { GATE_COUNT, LANES, Pick, RunnerEvent, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
+import { FINAL_GATE, GATE_COUNT, LANES, Pick, RunnerEvent, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
 
 interface Props {
   deck: string[];
@@ -30,8 +30,8 @@ const PERSPECTIVE = 10;
 const FAST = 3.5;
 
 export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }: Props) {
-  const sim = useMemo(() => new RunnerSim(deck, createRng()), [deck]);
   const owned = useMemo(() => new Set(unlocked), [unlocked]);
+  const sim = useMemo(() => new RunnerSim(deck, createRng(), owned), [deck, owned]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -209,7 +209,9 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
         {phase === 'done' && <div className="stage-banner">8 Karten gesammelt!<small>Das Duell beginnt …</small></div>}
         {phase !== 'done' && sim.gates[picks.length] && (
           <div className="gate-preview" aria-live="polite">
-            <span className="gate-preview-label">Nächstes Tor {picks.length + 1}</span>
+            {picks.length === FINAL_GATE
+              ? <span className="gate-preview-label final">★ Finaltor: neue Karten – bei Sieg gehört sie dir</span>
+              : <span className="gate-preview-label">Nächstes Tor {picks.length + 1} · aus deinem Deck</span>}
             <div className="gate-preview-cards">
               {sim.gates[picks.length].offers.map((o, i) => (
                 <Card
@@ -427,7 +429,7 @@ function draw(
           ctx.fillStyle = 'rgba(230,220,255,0.95)';
           ctx.font = `700 ${Math.round(13 * Math.min(1.4, mid.p * 1.6))}px system-ui, sans-serif`;
           ctx.textAlign = 'center';
-          ctx.fillText(`TOR ${g.index + 1}`, w / 2, mid.y - archH - 6 * mid.p);
+          ctx.fillText(g.index === FINAL_GATE ? '★ FINALE ★' : `TOR ${g.index + 1}`, w / 2, mid.y - archH - 6 * mid.p);
         }
         g.offers.forEach((offer, lane) => drawCard(ctx, project(z, lane), offer.cardId, offer.kind === 'discovery', !owned.has(offer.cardId)));
       },

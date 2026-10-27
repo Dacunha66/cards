@@ -14,7 +14,8 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadCardRecords } from './game/cardStore';
+import { getDb, isAdmin, loadCardRecords, loadGameSettings } from './game/cardStore';
+import { GameSettings, setGameSettings } from './game/settings';
 import { Admin } from './screens/Admin';
 
 export type Screen =
@@ -70,7 +71,9 @@ export function App() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const records = await loadCardRecords(await getDb());
+      const db = await getDb();
+      const [records, settings] = await Promise.all([loadCardRecords(db), loadGameSettings(db)]);
+      if (alive && settings) setGameSettings(settings);
       if (alive && records && records.length > 0) applyRecords(records);
       const ok = await isAdmin();
       if (alive) setAdmin(ok);
@@ -114,7 +117,9 @@ export function App() {
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} />}
       {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} />}
-      {screen.name === 'admin' && <Admin onCatalogChange={applyRecords} onBack={toMenu} />}
+      {screen.name === 'admin' && (
+        <Admin onCatalogChange={applyRecords} onSettingsChange={(s: GameSettings) => setGameSettings(s)} onBack={toMenu} />
+      )}
       {screen.name === 'runner' && (
         <Runner
           key={screen.runId}

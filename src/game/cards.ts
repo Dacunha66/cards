@@ -27,6 +27,10 @@ export interface CardDef {
   image?: string;
   /** Optional flavour text, shown in the card details. */
   description?: string;
+  /** false: never offered as a new card in the runner (default true). */
+  inRunner?: boolean;
+  /** true: only obtainable as a duel reward – never in booster packs (default false). */
+  rewardOnly?: boolean;
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = {

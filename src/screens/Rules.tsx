@@ -7,10 +7,10 @@ export function Rules({ onBack }: { onBack: () => void }) {
       <div className="scroll prose">
         <h2>1 · Der Lauf</h2>
         <p>Deine Figur rennt von allein. Wische nach links/rechts oder tippe auf ◀ ▶, um die Spur zu wechseln.</p>
-        <p>Du kommst durch <b>8 Tore</b> mit je 3 Karten. Du nimmst die Karte auf deiner Spur:</p>
+        <p>Du kommst durch <b>8 Tore</b> mit je 3 Karten und nimmst die Karte auf deiner Spur:</p>
         <ul>
-          <li><b>Silberner Rahmen</b> – Karte aus deinem Deck</li>
-          <li><b>Goldener Rahmen „NEU“</b> – Entdeckung aus dem restlichen Kartenpool</li>
+          <li><b>Tor 1–7</b> – Karten aus <b>deinem Deck</b>. Stell dir dein Deck vorher gut zusammen!</li>
+          <li><b>Tor 8 (Finale)</b> – <b>3 neue Karten</b> mit „NEU“. Die gewählte spielst du im Duell; <b>gewinnst du, gehört sie dir</b>.</li>
         </ul>
         <p><b>Stolpersteine</b> halten dich nicht auf, aber die <b>nächste Karte</b>, die du danach nimmst, ist im Duell um <b>1 schwächer</b> (alle vier Werte, mindestens 1). Weiche ihnen aus! Mit ⏩ läufst du schneller.</p>
 

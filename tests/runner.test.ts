@@ -1,23 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { CARDS, RARITIES, RARITY_POWER, STARTER_DECK, cardPower, getCard } from '../src/game/cards';
+import { CARDS, RARITIES, RARITY_POWER, STARTER_DECK, STARTING_UNLOCKED, cardPower, getCard } from '../src/game/cards';
 import { createRng } from '../src/game/rng';
-import { BASE_SPEED, FINISH_DISTANCE, GATE_COUNT, RunnerSim, STUMBLE_PENALTY, generateGates } from '../src/game/runner';
+import { BASE_SPEED, FINAL_GATE, FINISH_DISTANCE, GATE_COUNT, RunnerSim, STUMBLE_PENALTY, generateGates, generateObstacles } from '../src/game/runner';
+
+/** Lane that avoids every stone in the next row ahead (rows can block two lanes). */
+function freeLane(sim: RunnerSim): number {
+  const next = sim.obstacles.filter((o) => o.distance > sim.distance).sort((a, b) => a.distance - b.distance)[0];
+  if (!next) return sim.lane;
+  const blocked = new Set(sim.obstacles.filter((o) => o.distance === next.distance).map((o) => o.lane));
+  return [0, 1, 2].find((l) => !blocked.has(l))!;
+}
 
 describe('Runner', () => {
-  it('erzeugt 8 Gates mit je 2 Deck-Karten und 1 Entdeckung', () => {
+  it('Tor 1–7: drei verschiedene Deckkarten · Tor 8: drei neue Karten, die der Spieler noch nicht hat', () => {
+    const owned = new Set(STARTING_UNLOCKED);
     for (let seed = 1; seed <= 30; seed++) {
-      const gates = generateGates(STARTER_DECK, createRng(seed));
+      const gates = generateGates(STARTER_DECK, createRng(seed), owned);
       expect(gates).toHaveLength(8);
-      for (const g of gates) {
-        expect(g.offers).toHaveLength(3);
-        const deck = g.offers.filter((o) => o.kind === 'deck');
-        const disc = g.offers.filter((o) => o.kind === 'discovery');
-        expect(deck).toHaveLength(2);
-        expect(disc).toHaveLength(1);
-        expect(deck[0].cardId).not.toBe(deck[1].cardId);
-        for (const o of deck) expect(STARTER_DECK).toContain(o.cardId);
-        expect(STARTER_DECK).not.toContain(disc[0].cardId);
+      for (const g of gates.slice(0, 7)) {
+        expect(g.offers.every((o) => o.kind === 'deck')).toBe(true);
+        expect(new Set(g.offers.map((o) => o.cardId)).size).toBe(3);
+        for (const o of g.offers) expect(STARTER_DECK).toContain(o.cardId);
       }
+      const final = gates[FINAL_GATE].offers;
+      expect(final.every((o) => o.kind === 'discovery')).toBe(true);
+      expect(new Set(final.map((o) => o.cardId)).size).toBe(3);
+      for (const o of final) expect(owned.has(o.cardId)).toBe(false);
     }
   });
 
@@ -52,44 +60,59 @@ describe('Runner', () => {
 
   it('Stolperstein schwächt genau die nächste Karte um 1', () => {
     const sim = new RunnerSim(STARTER_DECK, createRng(7));
-    const stone = sim.obstacles[0];
-    sim.setLane(stone.lane);
-    const hit = sim.update((stone.distance + 0.1) / BASE_SPEED);
-    expect(hit.some((e) => e.type === 'bump')).toBe(true);
-    // Run through the next gate without another stone in between.
-    sim.update((sim.gates[1].distance - sim.distance + 0.1) / BASE_SPEED);
-    expect(sim.picks).toHaveLength(2);
-    expect(sim.picks[0].mod).toBe(0); // gate 0 lies before the first stone
-    expect(sim.picks[1].mod).toBe(STUMBLE_PENALTY);
+    const first = sim.obstacles[0];
+    expect(first.distance).toBeLessThan(sim.gates[0].distance);
+    // Hit the first stone, avoid all others.
+    sim.setLane(first.lane);
+    expect(sim.update((first.distance + 0.05) / BASE_SPEED).some((e) => e.type === 'bump')).toBe(true);
+    let t = 0;
+    while (!sim.finished && t < 120) {
+      sim.setLane(freeLane(sim));
+      sim.update(1 / 60);
+      t += 1 / 60;
+    }
+    expect(sim.picks).toHaveLength(8);
+    expect(sim.picks[0].mod).toBe(STUMBLE_PENALTY);
+    expect(sim.picks.slice(1).every((p) => p.mod === 0)).toBe(true);
   });
 
-  it('wer dem Stein ausweicht, bekommt keine Schwächung', () => {
-    for (let seed = 1; seed <= 20; seed++) {
+  it('wer den Steinen ausweicht, bekommt keine Schwächung – es bleibt immer eine Spur frei', () => {
+    for (let seed = 1; seed <= 30; seed++) {
       const sim = new RunnerSim(STARTER_DECK, createRng(seed));
       let t = 0;
       while (!sim.finished && t < 120) {
-        const next = sim.obstacles.find((o) => o.distance > sim.distance);
-        if (next) sim.setLane((next.lane + 1) % 3);
-        sim.update(1 / 30);
-        t += 1 / 30;
+        sim.setLane(freeLane(sim));
+        sim.update(1 / 60);
+        t += 1 / 60;
       }
       expect(sim.picks).toHaveLength(8);
       expect(sim.picks.every((p) => p.mod === 0)).toBe(true);
     }
   });
 
-  it('immer in den Stein laufen: trotzdem 8 Karten, höchstens −1 pro Karte', () => {
+  it('mehr Hindernisse: ein Stein vor Tor 1, danach zwei Reihen zwischen je zwei Toren', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const obs = generateObstacles(createRng(seed));
+      expect(obs.length).toBeGreaterThanOrEqual(15);
+      const rows = new Map<number, number>();
+      for (const o of obs) rows.set(o.distance, (rows.get(o.distance) ?? 0) + 1);
+      for (const n of rows.values()) expect(n).toBeLessThanOrEqual(2);
+      expect(rows.size).toBe(15);
+    }
+  });
+
+  it('immer in die Steine laufen: trotzdem 8 Karten, höchstens −1 pro Karte', () => {
     const sim = new RunnerSim(STARTER_DECK, createRng(3));
     let t = 0;
     while (!sim.finished && t < 120) {
       const next = sim.obstacles.find((o) => o.distance > sim.distance);
       if (next) sim.setLane(next.lane);
-      sim.update(1 / 30);
-      t += 1 / 30;
+      sim.update(1 / 60);
+      t += 1 / 60;
     }
     expect(sim.picks).toHaveLength(8);
-    expect(sim.picks.filter((p) => p.mod === STUMBLE_PENALTY).length).toBe(sim.obstacles.length);
-    expect(sim.picks.every((p) => p.mod >= STUMBLE_PENALTY)).toBe(true);
+    // There are stones before every gate, so every card is weakened – but never below −1.
+    expect(sim.picks.every((p) => p.mod === STUMBLE_PENALTY)).toBe(true);
   });
 
   it('auch ein großer Zeitsprung liefert genau 8 Karten', () => {
@@ -107,10 +130,10 @@ describe('Runner', () => {
     expect(sim.picks).toHaveLength(8);
   });
 
-  it('dauert bei normaler Geschwindigkeit 30–45 Sekunden', () => {
+  it('kürzerer Lauf: bei normaler Geschwindigkeit etwa 30 Sekunden (25–35)', () => {
     const seconds = FINISH_DISTANCE / BASE_SPEED;
-    expect(seconds).toBeGreaterThanOrEqual(30);
-    expect(seconds).toBeLessThanOrEqual(45);
+    expect(seconds).toBeGreaterThanOrEqual(25);
+    expect(seconds).toBeLessThanOrEqual(35);
   });
 
   it('Kartenpool: 100 eindeutige Karten, Werte 1–10, Stärke passt zur Seltenheit', () => {
@@ -139,17 +162,16 @@ describe('Runner', () => {
     for (let i = 1; i < order.length; i++) expect(order[i]).toBeGreaterThan(order[i - 1]);
   });
 
-  it('mystische Entdeckungen sind sehr selten (etwa 1 % pro Tor)', () => {
+  it('mystische Karten sind im Finaltor sehr selten (Standard: etwa 1 % je neuer Karte)', () => {
     let mythic = 0;
     let total = 0;
-    for (let seed = 1; seed <= 2000; seed++) {
-      for (const g of generateGates(STARTER_DECK, createRng(seed))) {
-        const d = g.offers.find((o) => o.kind === 'discovery')!;
+    for (let seed = 1; seed <= 3000; seed++) {
+      for (const o of generateGates(STARTER_DECK, createRng(seed), new Set(STARTING_UNLOCKED))[FINAL_GATE].offers) {
         total++;
-        if (getCard(d.cardId).rarity === 'mythic') mythic++;
+        if (getCard(o.cardId).rarity === 'mythic') mythic++;
       }
     }
     expect(mythic / total).toBeGreaterThan(0.004);
-    expect(mythic / total).toBeLessThan(0.02);
+    expect(mythic / total).toBeLessThan(0.025);
   });
 });

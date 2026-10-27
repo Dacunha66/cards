@@ -1,5 +1,19 @@
 # Testprotokoll
 
+## Version 1.5 – Balancing, Lauf-Verwaltung, neuer Lauf
+
+Neue Lauf-Regeln (vom Auftraggeber gewünscht): Tor 1–7 nur Deckkarten, Tor 8 (Finale) drei neue Karten; Lauf ca. 30 s statt 40 s; 15 Steinreihen statt 7 (eine Reihe kann zwei Spuren sperren, eine Spur bleibt immer frei). Alle anderen Regeln unverändert; neue Einstellungen starten mit den bisherigen Werten.
+
+**Automatische Tests (insgesamt 89, alle bestanden), neu/angepasst:**
+- Tor 1–7: drei verschiedene Deckkarten; Finaltor: drei verschiedene Karten, die der Spieler noch nicht besitzt
+- Mehr Hindernisse, immer eine Spur frei; Ausweichen ⇒ keine Schwächung; Treffer ⇒ höchstens −1 pro Karte; immer genau 8 Karten; Dauer 25–35 s
+- Häufigkeiten: Standard = bisherige Werte; ungültige Einstellungen ⇒ Standard; „nur Legendär“ ⇒ nur legendäre Karten im Finaltor; höheres Gewicht ⇒ häufiger; Speichern/Laden; Spieler können Einstellungen nicht ändern
+- „Nicht im Lauf“: erscheint nie als neue Karte, eigene Deckkarten bleiben nutzbar
+- „Nur Belohnung“: nie in Booster-Packs, aber im Finaltor gewinnbar; wird nicht verschenkt
+- Stärke-Übersicht: die 100 vorhandenen Karten sind unauffällig; ±3 Punkte vom Schnitt ⇒ Warnung; Vergleich nur mit aktiven Karten
+
+**Browser-Durchlauf mit nachgebauter Plattform:** Balancing-Reiter (Sortierung, Auffällige, Karte pausieren ⇒ verschwindet für Spieler), Lauf-Reiter (Gewicht ändern, speichern), Editor-Schalter mit Warnung „kann niemand bekommen“, neuer Lauf (Tor 1 „aus deinem Deck“, Finaltor mit neuen Karten, Gesamtdauer ca. 31 s). Keine Fehler.
+
 ## Version 1.4 – Admin-Dashboard
 
 Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 4 der Spielseite.

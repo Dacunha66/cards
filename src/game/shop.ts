@@ -40,7 +40,8 @@ export type ShopResult<T = object> = ({ ok: true; save: SaveData } & T) | { ok: 
 
 /** Draws the pack's cards (all different within one pack). */
 export function rollPack(pack: PackDef, rng: Rng): string[] {
-  const pool = [...CARDS];
+  // Reward-only cards are never in booster packs.
+  const pool = CARDS.filter((c) => !c.rewardOnly);
   const out: string[] = [];
   for (let i = 0; i < pack.size; i++) {
     const last = i === pack.size - 1;

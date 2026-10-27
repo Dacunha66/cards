@@ -4,17 +4,25 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { BUILTIN_CARDS, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity } from '../game/cards';
 import {
   CardRecord, CardStatus, DESCRIPTION_MAX, MIN_ACTIVE_CARDS, NAME_MAX, STATUSES, STATUS_LABEL, VALUE_KEYS, ValueKey,
-  builtinRecords, duplicateRecord, newRecord, nextCardId, powerHint, recordToCard,
+  balanceReport, builtinRecords, duplicateRecord, newRecord, nextCardId, powerHint, recordToCard,
 } from '../game/catalog';
 import {
-  Assets, CARDS_COLLECTION, Db, deleteCardRecord, describeError, getAssets, getDb, isAdmin, parseDocs, prepareCardImage, saveCardRecord,
+  Assets, CARDS_COLLECTION, Db, deleteCardRecord, describeError, getAssets, getDb, isAdmin, loadGameSettings, parseDocs, prepareCardImage,
+  saveCardRecord,
 } from '../game/cardStore';
+import { GameSettings, defaultSettings } from '../game/settings';
+import { BalanceView, RunnerSettingsView } from './AdminBalance';
 
 interface Props {
   /** Called with the live card list so the game picks up changes right away. */
   onCatalogChange: (records: CardRecord[]) => void;
+  /** Called after the runner settings were saved, so the game uses them right away. */
+  onSettingsChange: (settings: GameSettings) => void;
   onBack: () => void;
 }
+
+type Tab = 'cards' | 'balance' | 'runner';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf' };
 
 type SortKey = 'id' | 'name' | 'rarity' | 'updated';
 
@@ -22,16 +30,18 @@ const VALUE_LABEL: Record<ValueKey, string> = { top: 'Oben', right: 'Rechts', bo
 const STATUS_HINT: Record<CardStatus, string> = {
   draft: 'Nur hier sichtbar – noch nicht im Spiel.',
   active: 'Im Spiel: in Toren, Packs und beim Gegner.',
-  disabled: 'Nicht mehr im Spiel. Spieler behalten sie, sie taucht aber nirgends auf.',
+  disabled: 'Vorübergehend aus dem Spiel genommen – nicht gelöscht. Spieler behalten sie; jederzeit wieder aktivierbar.',
 };
 
-export function Admin({ onCatalogChange, onBack }: Props) {
+export function Admin({ onCatalogChange, onSettingsChange, onBack }: Props) {
   const [access, setAccess] = useState<'checking' | 'denied' | 'ok'>('checking');
   const [db, setDb] = useState<Db | null>(null);
   const [assets, setAssets] = useState<Assets | null>(null);
   const [records, setRecords] = useState<CardRecord[] | null>(null);
   const [editing, setEditing] = useState<{ draft: CardRecord; original: CardRecord | null } | null>(null);
   const [toast, setToast] = useState('');
+  const [tab, setTab] = useState<Tab>('cards');
+  const [settings, setSettings] = useState<GameSettings | null>(null);
   const changeRef = useRef(onCatalogChange);
   changeRef.current = onCatalogChange;
 
@@ -49,6 +59,7 @@ export function Admin({ onCatalogChange, onBack }: Props) {
       setAccess('ok');
       setDb(theDb);
       setAssets(await getAssets());
+      setSettings((await loadGameSettings(theDb)) ?? defaultSettings());
       unsub = theDb.collection(CARDS_COLLECTION).onSnapshot(
         (snap) => {
           const list = parseDocs(snap.docs);
@@ -106,16 +117,45 @@ export function Admin({ onCatalogChange, onBack }: Props) {
     );
   }
 
+  const open = (rec: CardRecord) => setEditing({ draft: { ...rec }, original: rec });
   return (
-    <CardList
-      records={records}
-      db={db!}
-      toast={toast}
-      onToast={setToast}
-      onBack={onBack}
-      onNew={() => setEditing({ draft: newRecord(nextCardId(allIds)), original: null })}
-      onOpen={(rec) => setEditing({ draft: { ...rec }, original: rec })}
-    />
+    <main className="screen admin">
+      <AdminHeader title="Kartenverwaltung" onBack={onBack} right={<span className="pill">{records?.length ?? '…'} Karten</span>} />
+      {records && records.length > 0 && (
+        <div className="admin-tabs" role="tablist">
+          {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
+            <button key={t} type="button" role="tab" aria-selected={tab === t} className={`admin-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+              {TAB_LABEL[t]}
+            </button>
+          ))}
+        </div>
+      )}
+      {(tab === 'cards' || !records || records.length === 0) && (
+        <CardList
+          records={records}
+          db={db!}
+          onToast={setToast}
+          onNew={() => setEditing({ draft: newRecord(nextCardId(allIds)), original: null })}
+          onOpen={open}
+        />
+      )}
+      {tab === 'balance' && records && records.length > 0 && <BalanceView records={records} db={db!} onToast={setToast} onOpen={open} />}
+      {tab === 'runner' && records && records.length > 0 && (
+        settings ? (
+          <RunnerSettingsView
+            records={records}
+            db={db!}
+            saved={settings}
+            onToast={setToast}
+            onSaved={(s) => {
+              setSettings(s);
+              onSettingsChange(s);
+            }}
+          />
+        ) : <p className="muted center">Einstellungen werden geladen …</p>
+      )}
+      {toast && <div className="admin-toast" role="status">{toast}</div>}
+    </main>
   );
 }
 
@@ -131,12 +171,10 @@ function AdminHeader({ title, onBack, right, back }: { title: string; onBack: ()
 
 // ---------------------------------------------------------------- list
 
-function CardList({ records, db, toast, onToast, onBack, onNew, onOpen }: {
+function CardList({ records, db, onToast, onNew, onOpen }: {
   records: CardRecord[] | null;
   db: Db;
-  toast: string;
   onToast: (m: string) => void;
-  onBack: () => void;
   onNew: () => void;
   onOpen: (rec: CardRecord) => void;
 }) {
@@ -185,9 +223,7 @@ function CardList({ records, db, toast, onToast, onBack, onNew, onOpen }: {
   }
 
   return (
-    <main className="screen admin">
-      <AdminHeader title="Kartenverwaltung" onBack={onBack} right={<span className="pill">{records?.length ?? '…'} Karten</span>} />
-
+    <>
       {records === null && <div className="admin-empty"><p>Karten werden geladen …</p></div>}
 
       {records?.length === 0 && (
@@ -254,7 +290,7 @@ function CardList({ records, db, toast, onToast, onBack, onNew, onOpen }: {
                       <span className="admin-row-meta">
                         <span className="mono">{r.id}</span> · <span className={`rarity-text rarity-${r.rarity}`}>{RARITY_LABEL[r.rarity]}</span>
                       </span>
-                      <span className="admin-row-values">⬆{r.top} ➡{r.right} ⬇{r.bottom} ⬅{r.left}{r.imageId ? ' · 🖼️' : ''}</span>
+                      <span className="admin-row-values">⬆{r.top} ➡{r.right} ⬇{r.bottom} ⬅{r.left} · <b>Σ {r.top + r.right + r.bottom + r.left}</b>{r.imageId ? ' · 🖼️' : ''}{!r.inRunner ? ' · 🚫' : ''}{r.rewardOnly ? ' · 🏆' : ''}</span>
                     </span>
                     <span className={`status-pill status-${r.status}`}>{STATUS_LABEL[r.status]}</span>
                   </button>
@@ -264,8 +300,7 @@ function CardList({ records, db, toast, onToast, onBack, onNew, onOpen }: {
           </div>
         </>
       )}
-      {toast && <div className="admin-toast" role="status">{toast}</div>}
-    </main>
+    </>
   );
 }
 
@@ -288,6 +323,11 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
   const uploaded = useRef<string[]>([]);
   const preview = recordToCard(draft);
   const hint = powerHint(draft);
+  // Compare against the other active cards of the same rarity (this card counted as active).
+  const balance = useMemo(
+    () => balanceReport([...records.filter((r) => r.id !== draft.id), { ...draft, status: 'active' }]).cards.get(draft.id)!,
+    [records, draft],
+  );
   const nameOk = draft.name.trim().length > 0;
   const dirty = !saved || JSON.stringify({ ...draft, updatedAt: '' }) !== JSON.stringify({ ...saved, updatedAt: '' });
 
@@ -456,6 +496,11 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
               {!hint.ok && (
                 <small className="field-warn">Hinweis: Für „{RARITY_LABEL[draft.rarity]}“ liegt die Summe der vier Werte im Spiel sonst bei {hint.min}–{hint.max}. Speichern ist trotzdem möglich.</small>
               )}
+              {balance.flag && balance.avg !== null && (
+                <small className="field-warn balance-warn">
+                  ⚠️ Auffällig {balance.flag === 'strong' ? 'stark' : 'schwach'}: Gesamtpunktzahl {hint.sum}, die anderen aktiven „{RARITY_LABEL[draft.rarity]}“-Karten haben im Schnitt {balance.avg.toLocaleString('de-DE')} ({balance.diff > 0 ? '+' : ''}{balance.diff.toLocaleString('de-DE')}).
+                </small>
+              )}
             </div>
 
             <label className="field">
@@ -474,6 +519,21 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
                 ))}
               </div>
               <small className="muted">{STATUS_HINT[draft.status]}</small>
+            </div>
+
+            <div className="field">
+              <span>Lauf &amp; Belohnung</span>
+              <label className="toggle toggle-left">
+                <input id="card-in-runner" type="checkbox" checked={draft.inRunner} onChange={(e) => set('inRunner', e.target.checked)} />
+                <span>Darf im Lauf als neue Karte erscheinen (Finaltor)</span>
+              </label>
+              <label className="toggle toggle-left">
+                <input id="card-reward-only" type="checkbox" checked={draft.rewardOnly} onChange={(e) => set('rewardOnly', e.target.checked)} />
+                <span>Nur durch Belohnung freischaltbar (nicht in Booster-Packs)</span>
+              </label>
+              {draft.rewardOnly && !draft.inRunner && (
+                <small className="field-warn">⚠️ So kann niemand diese Karte bekommen: Sie ist „nur Belohnung“, darf aber nicht im Lauf erscheinen.</small>
+              )}
             </div>
           </section>
         </div>

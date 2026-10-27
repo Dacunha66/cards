@@ -16,7 +16,7 @@ Ein mobiles Browserspiel für iPhone und iPad (Hochformat): Du **rennst** durch 
 Tipp: In Safari über **Teilen → „Zum Home-Bildschirm“** bekommst du ein App-Symbol.
 
 ### So funktioniert das Spiel
-- **Lauf:** Die Figur rennt von allein. **Wische** nach links/rechts oder tippe **◀ ▶**. In jedem der 8 Tore nimmst du die Karte auf deiner Spur. Oben im Himmel siehst du das **nächste Tor** groß mit allen Werten; die Karte deiner Spur ist weiß umrandet.
+- **Lauf (ca. 30 s):** Die Figur rennt von allein. **Wische** nach links/rechts oder tippe **◀ ▶**. In jedem der 8 Tore nimmst du die Karte auf deiner Spur. **Tor 1–7** zeigen Karten aus deinem **Deck**, das **Finaltor (Tor 8)** zeigt **3 neue Karten** – gewinnst du das Duell, gehört die gewählte dir. Oben im Himmel siehst du das **nächste Tor** groß mit allen Werten; die Karte deiner Spur ist weiß umrandet.
   - Silberner Rahmen = Karte aus deinem Deck
   - Goldener Rahmen mit **NEU** = Entdeckung aus dem restlichen Kartenpool
   - **Stolpersteine:** Läufst du in einen Stein, ist die **nächste Karte** im Duell um 1 schwächer (alle vier Werte, mindestens 1). Du erkennst sie am roten „−1“.
@@ -44,6 +44,10 @@ Im Hauptmenü erscheint für dich (Besitzer der Spielseite) der Knopf **🛠️ 
 5. Optional eine **Beschreibung** eingeben.
 6. **Status**: *Entwurf* (nur in der Verwaltung sichtbar), *Aktiv* (sofort im Spiel), *Deaktiviert* (nicht mehr im Spiel).
 7. **Speichern**. Oben links siehst du die ganze Zeit eine Live-Vorschau.
+
+**Balancing (Reiter „Balancing“)**: Übersicht aller Karten mit Gesamtpunktzahl Σ, sortierbar nach Stärke, Seltenheit oder Abweichung. ⚠️ markiert Karten, die 3+ Punkte stärker/schwächer sind als der Schnitt ihrer Seltenheit. Mit **⏸ Aus dem Spiel nehmen** pausierst du eine Karte, ohne sie zu löschen.
+
+**Lauf (Reiter „Lauf“)**: Wie oft jede Seltenheit im Finaltor erscheint (Gewichte + Prozentanzeige, „Standardwerte“ setzt alles zurück). Pro Karte stellst du im Editor ein, ob sie im Lauf erscheinen darf und ob sie **nur durch Belohnung** (nicht in Booster-Packs) zu bekommen ist.
 
 **Bearbeiten, duplizieren, löschen**: Karte in der Liste antippen. Mit der Suche und den Filtern (Status, Seltenheit, Sortierung) findest du Karten schnell.
 

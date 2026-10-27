@@ -3,8 +3,12 @@
 // and only admins get the picture storage at all. Without the platform (local development)
 // every function degrades to "no database" and the game uses its built-in cards.
 import { CardRecord, parseCardRecord, recordToDoc } from './catalog';
+import { GameSettings, parseSettings } from './settings';
 
 export const CARDS_COLLECTION = 'cards';
+/** Admin game settings live in one document: `settings/game`. */
+export const SETTINGS_COLLECTION = 'settings';
+export const SETTINGS_DOC = 'game';
 
 /** The parts of the platform API this game uses (see the platform's db/assets/user contracts). */
 export interface DocSnap { id: string; exists: boolean; data(): Record<string, unknown> | undefined }
@@ -82,6 +86,21 @@ export async function loadCardRecords(db: Db | null): Promise<CardRecord[] | nul
 
 export async function saveCardRecord(db: Db, rec: CardRecord): Promise<void> {
   await db.collection(CARDS_COLLECTION).doc(rec.id).set(recordToDoc(rec));
+}
+
+/** Reads the admin game settings. null = no database or nothing saved yet (built-in defaults apply). */
+export async function loadGameSettings(db: Db | null): Promise<GameSettings | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(SETTINGS_COLLECTION).doc(SETTINGS_DOC).get();
+    return snap.exists ? parseSettings(snap.data()) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveGameSettings(db: Db, settings: GameSettings): Promise<void> {
+  await db.collection(SETTINGS_COLLECTION).doc(SETTINGS_DOC).set({ discoveryShares: { ...settings.discoveryShares }, updatedAt: new Date().toISOString() });
 }
 
 export async function deleteCardRecord(db: Db, id: string): Promise<void> {
