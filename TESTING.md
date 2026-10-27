@@ -1,5 +1,18 @@
 # Testprotokoll
 
+## Version 1.3 (Feedback-Runde 3)
+
+Änderungen: rechteckige Karten (3:4) mit Bildbereich, Seltenheit als Rahmenfarbe mit Leuchten/Glanz/Regenbogen, Münzwurf mit Wahl, Animationen beim Einsammeln, Legen, Kämpfen, Ergebnis und im Shop.
+
+**Automatische Tests (insgesamt 51, alle bestanden)**
+- Münzwurf: beide Seiten etwa gleich oft (2000 Würfe)
+- Gewinnt der Computer den Münzwurf, lässt er dich beginnen (Simulation von 4000 Duellen: wer als Zweites legt, gewinnt etwa 4× so oft)
+- Jeder Zug speichert alle Vergleiche (übernommen und gehalten) für die Kampfanimation
+
+**Browser-Durchläufe (Chromium):** iPhone 390×844 und 375×667. Lauf mit Einsammel-Animation, Münzwurf (Werfen, Ergebnis, Wahl), Duell mit Vergleichs-Blasen und Übernahmen, Sieg mit Konfetti und neuer Karte, Niederlage, Shop (Pack-Öffnung, Skin-Kauf mit Stempel), Sammlung. Zusätzlich ein komplettes Duell mit „Animationen reduzieren“. Keine JavaScript-Fehler. Dabei gefundene und behobene Darstellungsfehler: Wert-Plaketten lagen über dem Ergebnis-Banner, Lichtstrahlen ragten aus dem Pack-Fenster, „NEU“ verdeckte den oberen Wert, der Siegbildschirm war oben abgeschnitten.
+
+**Nicht getestet:** echte Geräte (Safari auf iPhone/iPad). Der drehende Regenbogenrahmen mystischer Karten braucht Safari 16.4 oder neuer; auf älteren Geräten bleibt er stehen.
+
 ## Version 1.2 (Feedback-Runde 2)
 
 Änderungen: 100 Karten in 6 Seltenheiten (gewöhnlich, ungewöhnlich, selten, episch, legendär, mystisch) mit fester Stärke-Skala; Vorschau des nächsten Tors im Lauf; Gegner neu abgestimmt.

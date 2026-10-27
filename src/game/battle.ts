@@ -39,7 +39,19 @@ export interface BattleState {
   moveCount: number;
   /** Cells flipped by the most recent move (for animations). */
   lastFlips: number[];
+  /** Every comparison of the most recent move, captured or not (for the fight animation). */
+  lastClashes: Clash[];
   lastPlaced: number | null;
+}
+
+/** One comparison between the placed card and an opposing neighbour. */
+export interface Clash {
+  cell: number;
+  /** Side of the placed card facing the neighbour. */
+  dir: Dir;
+  attack: number;
+  defense: number;
+  captured: boolean;
 }
 
 export interface Move {
@@ -61,6 +73,7 @@ export function createBattle(playerHand: HandCard[], cpuHand: HandCard[], first:
     turn: first,
     moveCount: 0,
     lastFlips: [],
+    lastClashes: [],
     lastPlaced: null,
   };
 }
@@ -87,15 +100,35 @@ export function neighbours(cell: number): { cell: number; mine: Dir; theirs: Dir
   return out;
 }
 
-/** Cells that would be captured if `card` owned by `side` were placed on `cell`. */
-export function computeFlips(board: (BoardCell | null)[], cell: number, card: HandCard, side: Side): number[] {
-  const flips: number[] = [];
+/** All comparisons against opposing neighbours if `card` owned by `side` were placed on `cell`. */
+export function computeClashes(board: (BoardCell | null)[], cell: number, card: HandCard, side: Side): Clash[] {
+  const clashes: Clash[] = [];
   for (const n of neighbours(cell)) {
     const target = board[n.cell];
     if (!target || target.owner === side) continue;
-    if (cardValue(card, n.mine) > cardValue(target, n.theirs)) flips.push(n.cell);
+    const attack = cardValue(card, n.mine);
+    const defense = cardValue(target, n.theirs);
+    clashes.push({ cell: n.cell, dir: n.mine, attack, defense, captured: attack > defense });
   }
-  return flips;
+  return clashes;
+}
+
+/** Cells that would be captured if `card` owned by `side` were placed on `cell`. */
+export function computeFlips(board: (BoardCell | null)[], cell: number, card: HandCard, side: Side): number[] {
+  return computeClashes(board, cell, card, side).filter((c) => c.captured).map((c) => c.cell);
+}
+
+/** Coin toss before the duel. */
+export function coinToss(rng: () => number): Side {
+  return rng() < 0.5 ? 'player' : 'cpu';
+}
+
+/**
+ * The computer's choice after winning the toss. Placing the last card is a clear advantage
+ * (simulated: second mover wins about 4× as often), so it lets the player start.
+ */
+export function cpuChoosesFirst(): Side {
+  return 'player';
 }
 
 export function isLegalMove(state: BattleState, move: Move): boolean {
@@ -123,7 +156,8 @@ export function applyMove(state: BattleState, move: Move): BattleState {
   const side = state.turn;
   const hand = [...state.hands[side]];
   const [card] = hand.splice(move.handIndex, 1);
-  const flips = computeFlips(state.board, move.cell, card, side);
+  const clashes = computeClashes(state.board, move.cell, card, side);
+  const flips = clashes.filter((c) => c.captured).map((c) => c.cell);
   const board = [...state.board];
   board[move.cell] = { ...card, owner: side, placedBy: side };
   for (const f of flips) board[f] = { ...board[f]!, owner: side };
@@ -133,6 +167,7 @@ export function applyMove(state: BattleState, move: Move): BattleState {
     turn: other(side),
     moveCount: state.moveCount + 1,
     lastFlips: flips,
+    lastClashes: clashes,
     lastPlaced: move.cell,
   };
 }

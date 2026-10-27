@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
-import { BattleState, Outcome, Side, applyMove, createBattle, isGameOver, outcome, score } from '../game/battle';
+import { Burst } from '../components/Effects';
+import {
+  BOARD_SIZE, BattleState, Outcome, Side, applyMove, coinToss, cpuChoosesFirst, createBattle, isGameOver, other, outcome, score,
+} from '../game/battle';
 import { chooseCpuMove, drawCpuHand } from '../game/ai';
 import { createRng } from '../game/rng';
 import { Pick } from '../game/runner';
@@ -14,20 +17,30 @@ interface Props {
   onQuit: () => void;
 }
 
+/** Centre of a board cell in % of the board (the board padding is small enough to ignore). */
+function cellCenter(cell: number): { x: number; y: number } {
+  return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
+}
+
 export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props) {
   const rng = useMemo(() => createRng(), []);
-  const [state, setState] = useState<BattleState>(() => {
-    const first: Side = rng() < 0.5 ? 'player' : 'cpu';
-    return createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), drawCpuHand(rng), first);
-  });
+  const [state, setState] = useState<BattleState>(() =>
+    createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), drawCpuHand(rng), 'player'),
+  );
+  const [phase, setPhase] = useState<'toss' | 'play'>('toss');
   const [selected, setSelected] = useState<number | null>(null);
-  const [banner, setBanner] = useState<string | null>(state.turn === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!');
+  const [banner, setBanner] = useState<string | null>(null);
+  /** Captured cells still showing their old colour until the flip animation starts. */
+  const [pendingFlips, setPendingFlips] = useState<number[]>([]);
+  const [showClashes, setShowClashes] = useState(false);
   const ended = useRef(false);
   const over = isGameOver(state);
   const sc = score(state);
   const discoveryIndexes = useMemo(() => new Set(picks.flatMap((p, i) => (p.kind === 'discovery' ? [i] : []))), [picks]);
   // Map current hand positions back to the original pick (to keep the "NEU" marker).
   const [handOrigin, setHandOrigin] = useState<number[]>(() => picks.map((_, i) => i));
+  const animating = pendingFlips.length > 0;
+  const fxTime = reducedMotion ? 0 : 1;
 
   useEffect(() => {
     if (!banner) return;
@@ -35,22 +48,37 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
     return () => clearTimeout(t);
   }, [banner]);
 
+  // After every move: show the comparisons, then flip captured cards.
+  useEffect(() => {
+    if (state.lastPlaced === null) return;
+    setPendingFlips(state.lastFlips);
+    setShowClashes(state.lastClashes.length > 0);
+    const flip = setTimeout(() => setPendingFlips([]), 550 * fxTime);
+    const hide = setTimeout(() => setShowClashes(false), 1300 * fxTime + 300);
+    return () => {
+      clearTimeout(flip);
+      clearTimeout(hide);
+    };
+  }, [state, fxTime]);
+
   // Computer turn.
   useEffect(() => {
-    if (over || state.turn !== 'cpu') return;
+    if (phase !== 'play' || over || state.turn !== 'cpu') return;
+    const delay = reducedMotion ? 450 : state.lastClashes.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
       setState((s) => (s.turn === 'cpu' && !isGameOver(s) ? applyMove(s, chooseCpuMove(s, rng)) : s));
-    }, reducedMotion ? 450 : 850);
+    }, delay);
     return () => clearTimeout(t);
-  }, [state, over, rng, reducedMotion]);
+  }, [state, over, rng, reducedMotion, phase]);
 
-  useEffect(() => {
-    if (!over) return;
-    setBanner(null);
-  }, [over]);
+  const start = useCallback((first: Side) => {
+    setState((s) => ({ ...s, turn: first }));
+    setPhase('play');
+    setBanner(first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!');
+  }, []);
 
   function place(cell: number) {
-    if (over || state.turn !== 'player' || selected === null || state.board[cell]) return;
+    if (phase !== 'play' || over || animating || state.turn !== 'player' || selected === null || state.board[cell]) return;
     setState(applyMove(state, { handIndex: selected, cell }));
     setHandOrigin(handOrigin.filter((_, i) => i !== selected));
     setSelected(null);
@@ -62,15 +90,18 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
     onEnd(outcome(state), sc);
   }
 
-  const hint = over
-    ? ''
-    : state.turn === 'cpu'
-      ? 'Der Gegner überlegt …'
-      : selected === null
-        ? 'Wähle eine Karte aus deiner Hand.'
-        : 'Tippe auf ein freies Feld.';
-
-  const result = over ? outcome(state) : null;
+  const result = over && !animating ? outcome(state) : null;
+  const winner: Side | null = result === 'win' ? 'player' : result === 'loss' ? 'cpu' : null;
+  const hint = phase === 'toss'
+    ? 'Ein Münzwurf entscheidet, wer wählen darf.'
+    : over
+      ? ''
+      : state.turn === 'cpu'
+        ? 'Der Gegner überlegt …'
+        : selected === null
+          ? 'Wähle eine Karte aus deiner Hand.'
+          : 'Tippe auf ein freies Feld.';
+  const placedAt = state.lastPlaced !== null ? cellCenter(state.lastPlaced) : null;
 
   return (
     <main className="screen battle">
@@ -79,20 +110,24 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
         <div className="cpu-hand" aria-label={`Gegner hat noch ${state.hands.cpu.length} Karten`}>
           {state.hands.cpu.map((_, i) => <span key={i} className="card-back" />)}
         </div>
-        <div className={`turn-pill ${state.turn}`}>{over ? 'Ende' : state.turn === 'player' ? 'Dein Zug' : 'Gegner'}</div>
+        <div className={`turn-pill ${phase === 'play' ? state.turn : ''}`}>
+          {phase === 'toss' ? 'Münzwurf' : over ? 'Ende' : state.turn === 'player' ? 'Dein Zug' : 'Gegner'}
+        </div>
       </header>
 
       <div className="scorebar" aria-live="polite">
-        <span className="score blue">Du {sc.player}</span>
+        <span key={`p${sc.player}`} className="score blue pop">Du {sc.player}</span>
         <span className="moves">Zug {Math.min(state.moveCount + 1, 16)}/16</span>
-        <span className="score red">{sc.cpu} Gegner</span>
+        <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
       </div>
 
-      <div className="board" role="grid" aria-label="Spielfeld 4 mal 4">
+      <div className={`board ${result ? `ended ${result}` : ''}`} role="grid" aria-label="Spielfeld 4 mal 4">
         {state.board.map((cell, i) => {
-          const flipped = state.lastFlips.includes(i);
+          const pending = pendingFlips.includes(i);
+          const owner = cell ? (pending ? other(cell.owner) : cell.owner) : null;
+          const flipped = !pending && state.lastFlips.includes(i);
           const placed = state.lastPlaced === i;
-          const canDrop = !cell && selected !== null && state.turn === 'player' && !over;
+          const canDrop = phase === 'play' && !cell && selected !== null && state.turn === 'player' && !over && !animating;
           return (
             <button
               key={i}
@@ -100,25 +135,47 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
               role="gridcell"
               className={`cell ${canDrop ? 'droppable' : ''}`}
               onClick={() => place(i)}
-              disabled={!!cell || over}
+              disabled={!!cell || over || phase !== 'play'}
               aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei`}
             >
-              {cell && (
+              {cell && owner && (
                 <Card
-                  key={`${cell.cardId}-${cell.owner}`}
+                  key={`${cell.cardId}-${owner}`}
                   id={cell.cardId}
                   mod={cell.mod}
-                  owner={cell.owner}
+                  owner={owner}
                   size="sm"
-                  className={flipped ? 'anim-flip' : placed ? 'anim-drop' : ''}
+                  className={[
+                    flipped ? 'anim-flip' : placed ? 'anim-drop' : '',
+                    pending ? 'under-attack' : '',
+                    winner && owner === winner ? 'winner-glow' : '',
+                  ].join(' ')}
                 />
               )}
             </button>
           );
         })}
+
+        {showClashes && placedAt && state.lastClashes.map((c) => {
+          const t = cellCenter(c.cell);
+          const x = `${(placedAt.x + t.x) / 2}%`;
+          const y = `${(placedAt.y + t.y) / 2}%`;
+          return (
+            <div key={`${state.moveCount}-${c.cell}`}>
+              <div className={`clash ${c.captured ? 'won' : 'held'}`} style={{ left: x, top: y }}>
+                {c.attack} {c.captured ? '>' : c.attack === c.defense ? '=' : '<'} {c.defense}
+              </div>
+              {c.captured && !reducedMotion && (
+                <Burst x={x} y={y} colors={state.board[c.cell]?.owner === 'player' ? ['#fff', '#9cc3ff', '#ffcc33'] : ['#fff', '#ffb0b0', '#ffcc33']} count={12} spread={34} />
+              )}
+            </div>
+          );
+        })}
+
+        {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={rng} onDecide={start} />}
         {banner && <div className="board-banner">{banner}</div>}
         {result && (
-          <div className="board-banner end">
+          <div className={`board-banner end ${result}`}>
             <p>{result === 'win' ? '🏆 Sieg!' : result === 'draw' ? '🤝 Unentschieden' : '💀 Niederlage'}</p>
             <button type="button" className="btn btn-primary" onClick={finish}>Weiter zur Belohnung</button>
           </div>
@@ -138,10 +195,59 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
             badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
             badgeText={unlocked.includes(id) ? '★' : 'NEU'}
             selected={selected === i}
-            onClick={state.turn === 'player' && !over ? () => setSelected(selected === i ? null : i) : undefined}
+            onClick={phase === 'play' && state.turn === 'player' && !over ? () => setSelected(selected === i ? null : i) : undefined}
           />
         ))}
       </div>
     </main>
+  );
+}
+
+function CoinToss({ reducedMotion, rng, onDecide }: { reducedMotion: boolean; rng: () => number; onDecide: (first: Side) => void }) {
+  const [stage, setStage] = useState<'ready' | 'spinning' | 'result'>('ready');
+  const [winner, setWinner] = useState<Side | null>(null);
+
+  function toss() {
+    const w = coinToss(rng);
+    setWinner(w);
+    setStage('spinning');
+    setTimeout(() => setStage('result'), reducedMotion ? 150 : 1700);
+  }
+
+  // The computer decides on its own after a short pause.
+  useEffect(() => {
+    if (stage !== 'result' || winner !== 'cpu') return;
+    const t = setTimeout(() => onDecide(cpuChoosesFirst()), reducedMotion ? 900 : 2000);
+    return () => clearTimeout(t);
+  }, [stage, winner, onDecide, reducedMotion]);
+
+  return (
+    <div className="toss" role="dialog" aria-label="Münzwurf">
+      <div className={`coin-wrap ${stage === 'spinning' ? 'tossing' : ''}`}>
+        <div className={`coin ${stage === 'ready' ? 'idle' : `flip-${winner}`}`}>
+          <div className="coin-face front"><span>DU</span></div>
+          <div className="coin-face back"><span>GEGNER</span></div>
+        </div>
+      </div>
+      {stage === 'ready' && (
+        <>
+          <p className="toss-title">Wer beginnt?</p>
+          <button type="button" className="btn btn-primary" onClick={toss}>🪙 Münze werfen</button>
+        </>
+      )}
+      {stage === 'spinning' && <p className="toss-title">…</p>}
+      {stage === 'result' && winner === 'player' && (
+        <>
+          <p className="toss-title">Du gewinnst den Münzwurf!</p>
+          <div className="toss-actions">
+            <button type="button" className="btn btn-primary" onClick={() => onDecide('player')}>Ich beginne</button>
+            <button type="button" className="btn" onClick={() => onDecide('cpu')}>Gegner beginnt</button>
+          </div>
+        </>
+      )}
+      {stage === 'result' && winner === 'cpu' && (
+        <p className="toss-title">Der Gegner gewinnt den Münzwurf<br /><small>und lässt dich beginnen.</small></p>
+      )}
+    </div>
   );
 }

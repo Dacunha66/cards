@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BattleState, BoardCell, CELL_COUNT, applyMove, cardValue, computeFlips, createBattle, isGameOver, legalMoves, outcome, score, toHand,
+  BattleState, BoardCell, CELL_COUNT, applyMove, cardValue, coinToss, computeFlips, cpuChoosesFirst, createBattle, isGameOver, legalMoves, outcome, score, toHand,
 } from '../src/game/battle';
 import { chooseCpuMove, drawCpuHand } from '../src/game/ai';
 import { CARDS, CardDef, STARTER_DECK, cardPower, getCard } from '../src/game/cards';
@@ -193,5 +193,32 @@ describe('Balance', () => {
     for (let seed = 1; seed <= 300; seed++) {
       for (const c of drawCpuHand(createRng(seed))) expect(getCard(c.cardId).rarity).not.toBe('mythic');
     }
+  });
+});
+
+describe('Münzwurf & Kampfdetails', () => {
+  it('Münzwurf ergibt beide Seiten etwa gleich oft', () => {
+    const rng = createRng(42);
+    let player = 0;
+    for (let i = 0; i < 2000; i++) if (coinToss(rng) === 'player') player++;
+    expect(player).toBeGreaterThan(900);
+    expect(player).toBeLessThan(1100);
+  });
+
+  it('gewinnt der Computer den Münzwurf, lässt er dich anfangen (der letzte Zug ist ein Vorteil)', () => {
+    expect(cpuChoosesFirst()).toBe('player');
+  });
+
+  it('jeder Zug merkt sich alle Vergleiche – übernommene und gehaltene', () => {
+    const [x, a] = findPair((x, a) => x.right > a.left);
+    const [, b] = findPair((y, b) => y.id === x.id && x.left <= b.right);
+    const board = emptyBoard();
+    board[6] = cpu(a.id);
+    board[4] = cpu(b.id);
+    const next = applyMove(stateWith(board, [x.id]), { handIndex: 0, cell: 5 });
+    const byCell = Object.fromEntries(next.lastClashes.map((c) => [c.cell, c]));
+    expect(byCell[6]).toEqual({ cell: 6, dir: 'right', attack: x.right, defense: a.left, captured: true });
+    expect(byCell[4]).toEqual({ cell: 4, dir: 'left', attack: x.left, defense: b.right, captured: false });
+    expect(next.lastFlips).toEqual([6]);
   });
 });

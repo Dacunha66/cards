@@ -23,6 +23,8 @@ export interface CardDef {
   /** Placeholder illustration (emoji) and background hue. */
   art: string;
   hue: number;
+  /** Optional picture (URL or data URI). Shown instead of the emoji; cards are 3:4 portrait. */
+  image?: string;
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = {

@@ -19,6 +19,7 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <p>Jede Karte hat 4 Werte (oben, rechts, unten, links). Liegt daneben eine gegnerische Karte, wird verglichen: <b>deine Seite gegen die zugewandte Seite</b> der Nachbarkarte.</p>
         <p>Ist dein Wert <b>höher</b>, gehört die Karte jetzt dir. Gleichstand übernimmt nicht. Diagonal zählt nicht, und es gibt keine Kettenreaktionen.</p>
         <p>Nach 16 Zügen gewinnt, wer mehr Felder besitzt. 8:8 ist unentschieden.</p>
+        <p>Vor dem Duell entscheidet ein <b>Münzwurf</b>: Wer gewinnt, wählt, wer beginnt. Tipp: Wer die <b>letzte</b> Karte legt, hat oft einen Vorteil.</p>
 
         <h2>3 · Belohnung</h2>
         <p>Sieg: 🪙 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es 🪙 50 extra.</p>

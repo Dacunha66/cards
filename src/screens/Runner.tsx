@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
-import { getCard } from '../game/cards';
+import { Burst } from '../components/Effects';
+import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
 import { GATE_COUNT, LANES, Pick, RunnerEvent, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
 
@@ -41,6 +42,10 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
   const [toast, setToast] = useState<string | null>(null);
   const [stumbled, setStumbled] = useState(false);
   const [lane, setLane] = useState(sim.lane);
+  const [bursts, setBursts] = useState<{ key: number; x: number; y: number; colors: string[] }[]>([]);
+  const [landed, setLanded] = useState<Set<number>>(() => new Set());
+  /** Lane taken at each gate – the other two cards fade out on the canvas. */
+  const pickedLanes = useRef(new Map<number, number>());
   const fastRef = useRef(false);
   const phaseRef = useRef(phase);
   const view = useRef({ laneX: 1, shake: 0, bob: 0, w: 0, h: 0 });
@@ -63,7 +68,10 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
     for (const e of events) {
       if (e.type === 'pick') {
         const at = project(1.2, e.lane);
+        pickedLanes.current.set(e.gate, e.lane);
         setPicks((prev) => [...prev, { ...e.offer, gate: e.gate, mod: e.mod }]);
+        const colors = e.mod < 0 ? ['#ff8a8a', '#ef4444', '#fff'] : e.offer.kind === 'discovery' ? ['#ffcc33', '#fff3b0', '#ffffff'] : ['#ffffff', '#b9d5ff', skin[0]];
+        setBursts((prev) => [...prev, { key: e.gate, x: at.x, y: at.y - 60 * at.p, colors }]);
         setStumbled(false);
         setFlying((prev) => [...prev, {
           key: e.gate, cardId: e.offer.cardId, discovery: e.offer.kind === 'discovery', mod: e.mod, from: { x: at.x, y: at.y - 60 * at.p }, slot: e.gate,
@@ -78,7 +86,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
         setPhase('done');
       }
     }
-  }, [project]);
+  }, [project, skin]);
 
   // Start countdown.
   useEffect(() => {
@@ -127,7 +135,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
       v.laneX += (sim.lane - v.laneX) * k;
       v.shake = Math.max(0, v.shake - dt);
       if (phaseRef.current === 'run' && !reducedMotion) v.bob += dt * (fastRef.current ? 22 : 12);
-      draw(ctx, sim, v, project, owned, reducedMotion, skin);
+      draw(ctx, sim, v, project, owned, reducedMotion, skin, pickedLanes.current);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -218,6 +226,9 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
           </div>
         )}
         {toast && <div className="toast">{toast}</div>}
+        {!reducedMotion && bursts.map((b) => (
+          <Burst key={b.key} x={b.x} y={b.y} colors={b.colors} count={16} spread={70} onDone={() => setBursts((prev) => prev.filter((x) => x.key !== b.key))} />
+        ))}
         <div className="legend" aria-hidden="true">
           <span><i className="dot silver" /> Deck</span>
           <span><i className="dot gold" /> Entdeckung</span>
@@ -227,7 +238,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
 
       <div className="collected" aria-label={`Gesammelt ${picks.length} von ${GATE_COUNT}`}>
         {Array.from({ length: GATE_COUNT }, (_, i) => (
-          <div key={i} className="slot" ref={(el) => { slotRefs.current[i] = el; }}>
+          <div key={i} className={`slot ${landed.has(i) ? 'pop' : ''} ${picks[i]?.kind === 'discovery' ? 'gold' : ''}`} ref={(el) => { slotRefs.current[i] = el; }}>
             {picks[i] && !flying.some((f) => f.slot === i) && (
               <Card id={picks[i].cardId} mod={picks[i].mod} owner="player" size="xs" badge={picks[i].kind === 'discovery' ? 'discovery' : null} />
             )}
@@ -249,6 +260,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
           reducedMotion={reducedMotion}
           onDone={() => {
             setFlying((prev) => prev.filter((x) => x.key !== f.key));
+            setLanded((prev) => new Set(prev).add(f.slot));
           }}
         />
       ))}
@@ -276,11 +288,12 @@ function FlyingCard({ flying, stage, target, reducedMotion, onDone }: {
     const toY = t.top + t.height / 2;
     const anim = el.animate(
       [
-        { transform: `translate(${fromX}px, ${fromY}px) translate(-50%, -50%) scale(1.5)`, opacity: 1 },
-        { transform: `translate(${(fromX + toX) / 2}px, ${Math.min(fromY, toY) - 80}px) translate(-50%, -50%) scale(1.25) rotate(-8deg)`, opacity: 1, offset: 0.45 },
-        { transform: `translate(${toX}px, ${toY}px) translate(-50%, -50%) scale(0.75)`, opacity: 1 },
+        { transform: `translate(${fromX}px, ${fromY}px) translate(-50%, -50%) scale(0.6) rotateY(0deg)`, opacity: 0.4 },
+        { transform: `translate(${fromX}px, ${fromY - 30}px) translate(-50%, -50%) scale(1.6) rotateY(180deg)`, opacity: 1, offset: 0.3 },
+        { transform: `translate(${(fromX + toX) / 2}px, ${Math.min(fromY, toY) - 60}px) translate(-50%, -50%) scale(1.2) rotateY(360deg) rotate(-10deg)`, opacity: 1, offset: 0.65 },
+        { transform: `translate(${toX}px, ${toY}px) translate(-50%, -50%) scale(0.6) rotateY(360deg)`, opacity: 1 },
       ],
-      { duration: 650, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'forwards' },
+      { duration: 850, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'forwards' },
     );
     anim.onfinish = () => done.current();
     return () => anim.cancel();
@@ -304,6 +317,7 @@ function draw(
   owned: Set<string>,
   reducedMotion: boolean,
   skin: [string, string, string],
+  pickedLanes: Map<number, number>,
 ) {
   const { w, h } = v;
   ctx.save();
@@ -380,7 +394,19 @@ function draw(
     objs.push({ z, draw: () => drawRock(ctx, project(z, o.lane)) });
   }
   for (const g of sim.gates) {
-    if (g.index < sim.gatesTaken) continue;
+    if (g.index < sim.gatesTaken) {
+      // The two cards you did not take sink and fade away.
+      const passed = sim.distance - g.distance;
+      if (reducedMotion || passed > 4) continue;
+      const fade = Math.min(1, passed / 4);
+      objs.push({
+        z: 0,
+        draw: () => g.offers.forEach((offer, lane) => {
+          if (lane !== pickedLanes.get(g.index)) drawCard(ctx, project(0, lane), offer.cardId, offer.kind === 'discovery', false, fade);
+        }),
+      });
+      continue;
+    }
     const z = g.distance - sim.distance;
     if (z > VIEW_DISTANCE) continue;
     objs.push({
@@ -460,69 +486,95 @@ function drawRock(ctx: CanvasRenderingContext2D, at: { x: number; y: number; p: 
   ctx.fill();
 }
 
+const RARITY_FRAME: Record<Rarity, string> = {
+  common: '#c7ccd6', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', legendary: '#fbbf24', mythic: '#ff7ad9',
+};
+
+/** Draws a 3:4 card standing on the road. `fade` 0..1 lets passed cards sink and disappear. */
 function drawCard(
   ctx: CanvasRenderingContext2D,
   at: { x: number; y: number; p: number; half: number },
   cardId: string,
   discovery: boolean,
   isNew: boolean,
+  fade = 0,
 ) {
   const c = getCard(cardId);
-  const cw = ((at.half * 2) / LANES) * 0.78;
-  const ch = cw * 1.3;
+  const cw = ((at.half * 2) / LANES) * 0.74 * (1 - fade * 0.4);
+  const ch = (cw * 4) / 3;
   const x = at.x - cw / 2;
-  const y = at.y - ch - 6 * at.p;
-  if (discovery) {
-    ctx.shadowColor = 'rgba(255,200,60,0.9)';
-    ctx.shadowBlur = 18 * at.p;
+  const y = at.y - ch - 6 * at.p + fade * ch * 0.6;
+  const frame = RARITY_FRAME[c.rarity];
+  const bw = Math.max(1.5, cw * 0.05);
+  ctx.save();
+  ctx.globalAlpha = 1 - fade;
+  // Glow: discovery gold, otherwise by rarity (rare and up).
+  if (discovery || RARITY_ORDER[c.rarity] >= RARITY_ORDER.rare) {
+    ctx.shadowColor = discovery ? 'rgba(255,200,60,0.95)' : frame;
+    ctx.shadowBlur = (discovery ? 20 : 6 + RARITY_ORDER[c.rarity] * 3) * at.p;
   }
-  const g = ctx.createLinearGradient(x, y, x, y + ch);
-  g.addColorStop(0, `hsl(${c.hue} 55% 42%)`);
-  g.addColorStop(1, `hsl(${c.hue} 60% 22%)`);
-  ctx.fillStyle = g;
-  roundRect(ctx, x, y, cw, ch, 6 * at.p);
+  // Body + frame.
+  if (c.rarity === 'mythic') {
+    const rg = ctx.createLinearGradient(x, y, x + cw, y + ch);
+    ['#ff5f6d', '#ffc371', '#f9f871', '#4ade80', '#60a5fa', '#c084fc'].forEach((col, i, a) => rg.addColorStop(i / (a.length - 1), col));
+    ctx.fillStyle = rg;
+  } else {
+    ctx.fillStyle = frame;
+  }
+  roundRect(ctx, x, y, cw, ch, cw * 0.09);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.lineWidth = Math.max(1.5, (discovery ? 5 : 3) * at.p);
-  ctx.strokeStyle = discovery ? '#ffcc33' : '#d9dde8';
-  ctx.stroke();
-
-  if (cw > 18) {
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `${Math.round(cw * 0.42)}px system-ui, "Apple Color Emoji", sans-serif`;
+  const g = ctx.createLinearGradient(x, y, x, y + ch);
+  g.addColorStop(0, `hsl(${c.hue} 40% 30%)`);
+  g.addColorStop(1, `hsl(${c.hue} 45% 14%)`);
+  ctx.fillStyle = g;
+  roundRect(ctx, x + bw, y + bw, cw - 2 * bw, ch - 2 * bw, cw * 0.07);
+  ctx.fill();
+  // Picture area.
+  const ax = x + cw * 0.12, ay = y + ch * 0.12, aw = cw * 0.76, ah = ch * 0.76;
+  const ag = ctx.createRadialGradient(at.x, ay + ah * 0.38, 0, at.x, ay + ah * 0.38, aw * 0.75);
+  ag.addColorStop(0, `hsl(${c.hue} 60% 52%)`);
+  ag.addColorStop(1, `hsl(${c.hue} 55% 22%)`);
+  ctx.fillStyle = ag;
+  roundRect(ctx, ax, ay, aw, ah, cw * 0.06);
+  ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if (cw > 16) {
+    ctx.font = `${Math.round(cw * 0.44)}px system-ui, "Apple Color Emoji", sans-serif`;
     ctx.fillStyle = '#fff';
-    ctx.fillText(c.art, at.x, y + ch * 0.5);
+    ctx.fillText(c.art, at.x, y + ch * 0.52);
   }
-  if (cw > 30) {
-    const fs = Math.max(9, Math.round(cw * 0.2));
-    ctx.font = `800 ${fs}px system-ui, sans-serif`;
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-    ctx.lineWidth = Math.max(2, fs * 0.22);
-    const vals: [string, number, number][] = [
-      [String(c.top), at.x, y + fs * 0.75],
-      [String(c.bottom), at.x, y + ch - fs * 0.75],
-      [String(c.left), x + fs * 0.6, y + ch / 2],
-      [String(c.right), x + cw - fs * 0.6, y + ch / 2],
+  if (cw > 28) {
+    const r = Math.max(6, cw * 0.135);
+    ctx.font = `900 ${Math.round(r * 1.4)}px system-ui, sans-serif`;
+    const vals: [number, number, number][] = [
+      [c.top, at.x, y + r + 1],
+      [c.bottom, at.x, y + ch - r - 1],
+      [c.left, x + r + 1, y + ch / 2],
+      [c.right, x + cw - r - 1, y + ch / 2],
     ];
-    for (const [t, tx, ty] of vals) {
-      ctx.strokeText(t, tx, ty);
-      ctx.fillText(t, tx, ty);
+    for (const [v, vx, vy] of vals) {
+      ctx.fillStyle = 'rgba(10,8,26,0.85)';
+      ctx.beginPath();
+      ctx.arc(vx, vy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(String(v), vx, vy + r * 0.06);
     }
   }
-  if (discovery && cw > 24) {
+  if (discovery && cw > 24 && fade === 0) {
     const fs = Math.max(9, Math.round(cw * 0.17));
     ctx.font = `800 ${fs}px system-ui, sans-serif`;
     const label = isNew ? '★ NEU' : '★ ENTDECKT';
     const lw = ctx.measureText(label).width + fs;
     ctx.fillStyle = '#ffcc33';
-    roundRect(ctx, at.x - lw / 2, y - fs * 1.5, lw, fs * 1.3, fs * 0.4);
+    roundRect(ctx, at.x - lw / 2, y - fs * 1.55, lw, fs * 1.3, fs * 0.4);
     ctx.fill();
     ctx.fillStyle = '#2a1a00';
-    ctx.fillText(label, at.x, y - fs * 0.85);
+    ctx.fillText(label, at.x, y - fs * 0.9);
   }
-  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

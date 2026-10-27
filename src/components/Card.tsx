@@ -36,9 +36,11 @@ export function Card({ id, owner, size = 'md', locked, badge, badgeText = 'NEU',
     : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}, oben ${v(c.top)}, rechts ${v(c.right)}, unten ${v(c.bottom)}, links ${v(c.left)}`);
   const content = (
     <>
+      <span className="art" aria-hidden="true">
+        {locked ? '🔒' : c.image ? <img src={c.image} alt="" draggable={false} /> : c.art}
+      </span>
       <span className="v v-top">{locked ? '?' : v(c.top)}</span>
       <span className="v v-left">{locked ? '?' : v(c.left)}</span>
-      <span className="art" aria-hidden="true">{locked ? '🔒' : c.art}</span>
       <span className="v v-right">{locked ? '?' : v(c.right)}</span>
       <span className="v v-bottom">{locked ? '?' : v(c.bottom)}</span>
       <span className="gem" aria-hidden="true" />
