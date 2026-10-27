@@ -33,6 +33,9 @@ Dein Fortschritt wird **nur in diesem Browser auf diesem Gerät** gespeichert (l
 - iPhone und iPad haben **getrennte** Spielstände.
 - Wenn du in Safari die **Website-Daten löschst** oder im **privaten Modus** spielst, ist der Fortschritt weg.
 
+### Collection League (Testmodus)
+Im Hauptmenü **🏆 Collection League**: Liga-Deck bauen (20 Karten, max. 2 gleiche, max. 1 legendäre, 1 mystische, 4 epische), dann ein Match gegen den Computer: Lauf mit je 2 Deckkarten + 1 neutraler Entdeckung pro Tor, danach 2 Runden mit getauschtem Start, bei 1:1 ein Entscheidungsduell. In jedem Duell blockiert ein **Fels** ein Feld (fair, kein Unentschieden). Testmodus: keine Belohnung, keine Wertung. Hintergründe: [BALANCING.md](BALANCING.md).
+
 ### Karten verwalten (Admin-Dashboard)
 Im Hauptmenü erscheint für dich (Besitzer der Spielseite) der Knopf **🛠️ Kartenverwaltung**. Normale Spieler sehen ihn nicht.
 

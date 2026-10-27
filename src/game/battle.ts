@@ -42,6 +42,11 @@ export interface BattleState {
   /** Every comparison of the most recent move, captured or not (for the fight animation). */
   lastClashes: Clash[];
   lastPlaced: number | null;
+  /**
+   * Blocked cells ("Felsfeld"). With one rock there are 15 fields: the starting side places the
+   * last card and nobody can draw – this removes the second mover's advantage (see BALANCING.md).
+   */
+  rocks: number[];
 }
 
 /** One comparison between the placed card and an opposing neighbour. */
@@ -63,7 +68,7 @@ export function other(side: Side): Side {
   return side === 'player' ? 'cpu' : 'player';
 }
 
-export function createBattle(playerHand: HandCard[], cpuHand: HandCard[], first: Side = 'player'): BattleState {
+export function createBattle(playerHand: HandCard[], cpuHand: HandCard[], first: Side = 'player', rocks: number[] = []): BattleState {
   if (playerHand.length !== HAND_SIZE || cpuHand.length !== HAND_SIZE) {
     throw new Error(`Each side needs exactly ${HAND_SIZE} cards`);
   }
@@ -75,7 +80,13 @@ export function createBattle(playerHand: HandCard[], cpuHand: HandCard[], first:
     lastFlips: [],
     lastClashes: [],
     lastPlaced: null,
+    rocks: [...new Set(rocks)].filter((c) => Number.isInteger(c) && c >= 0 && c < CELL_COUNT),
   };
+}
+
+/** A random rock cell for a balanced duel. */
+export function randomRock(rng: () => number): number {
+  return Math.floor(rng() * CELL_COUNT);
 }
 
 /** Neighbour directions: own side vs. the neighbour's opposite side. */
@@ -136,6 +147,7 @@ export function isLegalMove(state: BattleState, move: Move): boolean {
     !isGameOver(state) &&
     Number.isInteger(move.cell) && move.cell >= 0 && move.cell < CELL_COUNT &&
     state.board[move.cell] === null &&
+    !state.rocks.includes(move.cell) &&
     Number.isInteger(move.handIndex) && move.handIndex >= 0 && move.handIndex < state.hands[state.turn].length
   );
 }
@@ -144,7 +156,7 @@ export function legalMoves(state: BattleState): Move[] {
   if (isGameOver(state)) return [];
   const moves: Move[] = [];
   state.board.forEach((cell, i) => {
-    if (cell) return;
+    if (cell || state.rocks.includes(i)) return;
     state.hands[state.turn].forEach((_, h) => moves.push({ handIndex: h, cell: i }));
   });
   return moves;
@@ -169,11 +181,17 @@ export function applyMove(state: BattleState, move: Move): BattleState {
     lastFlips: flips,
     lastClashes: clashes,
     lastPlaced: move.cell,
+    rocks: state.rocks,
   };
 }
 
+/** Number of moves in a duel: one per free field (16, or 15 with a rock). */
+export function totalMoves(state: Pick<BattleState, 'rocks'>): number {
+  return CELL_COUNT - state.rocks.length;
+}
+
 export function isGameOver(state: BattleState): boolean {
-  return state.moveCount >= CELL_COUNT;
+  return state.moveCount >= totalMoves(state);
 }
 
 export function score(state: BattleState): Record<Side, number> {

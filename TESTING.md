@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Version 1.6 – Liga-Grundlagen
+
+Neu: Deckregeln je Modus, Felsfeld, Match-Format (2 Runden + Entscheidungsduell), faire Lauf-Angebote mit Match-Seed, Aufzeichnen/Nachspielen des Laufs, Collection-League-Testmodus. Das Abenteuer ist unverändert.
+
+**Automatische Tests (insgesamt 113, alle bestanden), neu:** Deckregeln (Kopien, Legendär/Mystisch/Episch, Besitz), automatisches Deck, Felsfeld (15 Züge, nie spielbar, kein Unentschieden, Fairness 40–60 % über 3000 Partien), Match-Format (Münzwurf, Tausch, 2:0, Entscheidungsduell und dessen Fairness), Lauf-Angebote (gleicher Seed = gleiche Angebote, 2 Deck + 1 neutral, ohne Zurücklegen, gleiche Entdeckungen und Steine für beide, mittlere Stärke), SHA-256-Fingerabdruck, Nachspielen ergibt exakt dieselben Karten/Strafen (40 Läufe), gefälschte Eingaben werden erkannt.
+
+**Browser-Durchlauf:** Liga-Deck (Grenzen greifen), Match-Code und Fingerabdruck, Lauf ohne Vorspulen (ca. 32 s), Runden mit Fels, Ergebnis „Lauf-Prüfung: ✓ nachgespielt und bestätigt“. Abenteuer und Admin-Dashboard unverändert ohne Fehler.
+
+**Supabase:** Tabellen `cards`, `game_settings`, `profiles`, `admins`, Bild-Speicher `card-images` mit Zeilen-Sicherheit. 101 Karten übernommen. Geprüft: Besucher lesen Karten, sehen keine Admins/Profile; ein angemeldeter Nicht-Admin ändert 0 Zeilen und kann keine Karte anlegen.
+
 ## Version 1.5 – Balancing, Lauf-Verwaltung, neuer Lauf
 
 Neue Lauf-Regeln (vom Auftraggeber gewünscht): Tor 1–7 nur Deckkarten, Tor 8 (Finale) drei neue Karten; Lauf ca. 30 s statt 40 s; 15 Steinreihen statt 7 (eine Reihe kann zwei Spuren sperren, eine Spur bleibt immer frei). Alle anderen Regeln unverändert; neue Einstellungen starten mit den bisherigen Werten.

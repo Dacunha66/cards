@@ -11,6 +11,8 @@ export interface SaveData {
   settings: { reducedMotion: boolean };
   /** Owned and equipped skins (one per kind). */
   skins: { owned: string[]; card: string; runner: string };
+  /** Deck for the Collection League test mode (up to 2 copies per card). */
+  leagueDeck: string[];
 }
 
 export const SAVE_KEY = 'project-card-rush/save-v1';
@@ -29,6 +31,7 @@ export function defaultSave(): SaveData {
     stats: { wins: 0, draws: 0, losses: 0, runs: 0 },
     settings: { reducedMotion: false },
     skins: { owned: [DEFAULT_SKINS.card, DEFAULT_SKINS.runner], card: DEFAULT_SKINS.card, runner: DEFAULT_SKINS.runner },
+    leagueDeck: [],
   };
 }
 
@@ -65,6 +68,7 @@ export function sanitize(raw: unknown): SaveData {
     stats: { wins: num(s.wins), draws: num(s.draws), losses: num(s.losses), runs: num(s.runs) },
     settings: { reducedMotion: Boolean(r.settings?.reducedMotion) },
     skins: { owned, card: equipped('card'), runner: equipped('runner') },
+    leagueDeck: Array.isArray(r.leagueDeck) ? r.leagueDeck.filter(isPlausibleCardId).slice(0, DECK_SIZE) : [],
   };
 }
 

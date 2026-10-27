@@ -107,39 +107,73 @@ export function generateObstacles(rng: Rng): Obstacle[] {
   return obstacles;
 }
 
+/** A complete track: the gates with their offers and all stones. */
+export interface RunnerLayout {
+  gates: Gate[];
+  obstacles: Obstacle[];
+}
+
+/** One lane change, recorded at the track distance where it happened. */
+export interface RunInput {
+  d: number;
+  lane: number;
+}
+
+/** Minimum track distance between two lane changes in ranked replays (≈ 55 ms at normal speed). */
+export const MIN_INPUT_GAP = 0.5;
+
 export class RunnerSim {
   distance = 0;
   lane = 1;
   readonly picks: Pick[] = [];
   readonly gates: Gate[];
   readonly obstacles: Obstacle[];
+  /** Every lane change in order – enough to replay the run exactly (see `replayRun`). */
+  readonly inputs: RunInput[] = [];
   finished = false;
   /** True after hitting a stone until the next card is taken. */
   stumbled = false;
   private nextGate = 0;
   private nextObstacle = 0;
 
-  constructor(deck: string[], rng: Rng, owned: ReadonlySet<string> = new Set()) {
-    this.gates = generateGates(deck, rng, owned);
-    this.obstacles = generateObstacles(rng);
+  constructor(deckOrLayout: string[] | RunnerLayout, rng?: Rng, owned: ReadonlySet<string> = new Set()) {
+    if (Array.isArray(deckOrLayout)) {
+      if (!rng) throw new Error('rng required');
+      this.gates = generateGates(deckOrLayout, rng, owned);
+      this.obstacles = generateObstacles(rng);
+    } else {
+      this.gates = deckOrLayout.gates;
+      this.obstacles = [...deckOrLayout.obstacles].sort((a, b) => a.distance - b.distance);
+    }
   }
 
   moveLane(dir: -1 | 1): void {
-    if (this.finished) return;
-    this.lane = Math.max(0, Math.min(LANES - 1, this.lane + dir));
+    this.setLane(this.lane + dir);
   }
 
   setLane(lane: number): void {
     if (this.finished) return;
-    this.lane = Math.max(0, Math.min(LANES - 1, Math.round(lane)));
+    const next = Math.max(0, Math.min(LANES - 1, Math.round(lane)));
+    if (next === this.lane) return;
+    // Ignore a second change within a few milliseconds (accidental double swipe): keeps every
+    // recorded run valid for the server check.
+    const last = this.inputs[this.inputs.length - 1];
+    if (last && this.distance - last.d < MIN_INPUT_GAP) return;
+    this.lane = next;
+    this.inputs.push({ d: this.distance, lane: next });
   }
 
   /** Advance by dt seconds. Returns the events that happened. */
   update(dt: number, speedMultiplier = 1): RunnerEvent[] {
     if (this.finished) return [];
+    return this.advanceTo(this.distance + Math.max(0, dt) * BASE_SPEED * speedMultiplier);
+  }
+
+  /** Advance to an absolute track distance, handling stones and gates in track order. */
+  advanceTo(distance: number): RunnerEvent[] {
+    if (this.finished) return [];
     const events: RunnerEvent[] = [];
-    this.distance += Math.max(0, dt) * BASE_SPEED * speedMultiplier;
-    // Handle stones and gates strictly in track order, even after a long frame.
+    this.distance = Math.max(this.distance, distance);
     for (;;) {
       const o = this.obstacles[this.nextObstacle];
       const g = this.gates[this.nextGate];
@@ -164,7 +198,6 @@ export class RunnerSim {
     }
     return events;
   }
-
   /** Test/impatience shortcut: take the current-lane card of every remaining gate. */
   skipToEnd(): RunnerEvent[] {
     const events: RunnerEvent[] = [];
@@ -189,4 +222,35 @@ export class RunnerSim {
     this.picks.push({ ...offer, gate: gate.index, mod });
     return { type: 'pick', gate: gate.index, lane: this.lane, offer, mod };
   }
+}
+
+/** Checks that recorded inputs could come from a person (one lane per input, sane timing). */
+export function validateRunInputs(inputs: readonly RunInput[]): string | null {
+  let lane = 1;
+  let last = -Infinity;
+  for (const inp of inputs) {
+    if (!Number.isFinite(inp.d) || inp.d < 0 || inp.d > FINISH_DISTANCE) return 'Eingabe außerhalb der Strecke';
+    if (inp.d < last) return 'Eingaben nicht in zeitlicher Reihenfolge';
+    if (inp.d - last < MIN_INPUT_GAP) return 'Spurwechsel zu schnell hintereinander';
+    if (!Number.isInteger(inp.lane) || inp.lane < 0 || inp.lane >= LANES || Math.abs(inp.lane - lane) !== 1) return 'Unmöglicher Spurwechsel';
+    lane = inp.lane;
+    last = inp.d;
+  }
+  return null;
+}
+
+/**
+ * Replays a run from its track and recorded lane changes – exactly what the server will do to
+ * check the picks and stone penalties a player reports.
+ */
+export function replayRun(layout: RunnerLayout, inputs: readonly RunInput[]): { picks: Pick[]; error: string | null } {
+  const error = validateRunInputs(inputs);
+  if (error) return { picks: [], error };
+  const sim = new RunnerSim(layout);
+  for (const inp of inputs) {
+    sim.advanceTo(inp.d);
+    sim.setLane(inp.lane);
+  }
+  sim.advanceTo(FINISH_DISTANCE);
+  return { picks: sim.picks, error: null };
 }

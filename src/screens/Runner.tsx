@@ -4,7 +4,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import { RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
-import { FINAL_GATE, GATE_COUNT, LANES, Pick, RunnerEvent, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
+import { FINAL_GATE, GATE_COUNT, LANES, Pick, RunInput, RunnerEvent, RunnerLayout, RunnerSim, STUMBLE_PENALTY } from '../game/runner';
 
 interface Props {
   deck: string[];
@@ -12,8 +12,10 @@ interface Props {
   reducedMotion: boolean;
   /** Runner skin colours: main, dark, light. */
   skin: [string, string, string];
-  onFinish: (picks: Pick[]) => void;
+  onFinish: (picks: Pick[], inputs: RunInput[]) => void;
   onQuit: () => void;
+  /** League: a fixed, seed-generated track (no fast-forward, no skipping). */
+  layout?: RunnerLayout;
 }
 
 interface Flying {
@@ -29,9 +31,9 @@ const VIEW_DISTANCE = 80;
 const PERSPECTIVE = 10;
 const FAST = 3.5;
 
-export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }: Props) {
+export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, layout }: Props) {
   const owned = useMemo(() => new Set(unlocked), [unlocked]);
-  const sim = useMemo(() => new RunnerSim(deck, createRng(), owned), [deck, owned]);
+  const sim = useMemo(() => (layout ? new RunnerSim(layout) : new RunnerSim(deck, createRng(), owned)), [layout, deck, owned]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -103,7 +105,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
   // Hand over to the duel once all cards are in.
   useEffect(() => {
     if (phase !== 'done') return;
-    const t = setTimeout(() => onFinish(sim.picks.slice()), reducedMotion ? 600 : 1400);
+    const t = setTimeout(() => onFinish(sim.picks.slice(), sim.inputs.slice()), reducedMotion ? 600 : 1400);
     return () => clearTimeout(t);
   }, [phase, sim, onFinish, reducedMotion]);
 
@@ -135,7 +137,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
       v.laneX += (sim.lane - v.laneX) * k;
       v.shake = Math.max(0, v.shake - dt);
       if (phaseRef.current === 'run' && !reducedMotion) v.bob += dt * (fastRef.current ? 22 : 12);
-      draw(ctx, sim, v, project, owned, reducedMotion, skin, pickedLanes.current);
+      draw(ctx, sim, v, project, owned, reducedMotion, skin, pickedLanes.current, !!layout);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -190,10 +192,14 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
       <header className="runner-hud">
         <ConfirmButton label="✕" ariaLabel="Lauf abbrechen" confirmLabel="Abbrechen?" onConfirm={onQuit} />
         <span className={`pill ${stumbled ? 'pill-warn' : ''}`}>{stumbled ? `⚠ ${STUMBLE_PENALTY}` : `Tor ${Math.min(picks.length + 1, GATE_COUNT)}/${GATE_COUNT}`}</span>
-        <button type="button" className={`btn btn-small ${fast ? 'active' : ''}`} onClick={() => setFast(!fast)} aria-pressed={fast}>
-          ⏩ {fast ? '3×' : '1×'}
-        </button>
-        <button type="button" className="btn btn-small" onClick={skip} disabled={phase === 'done'}>⏭ Überspringen</button>
+        {layout ? <span className="pill ranked-pill">Liga · Echtzeit</span> : (
+          <>
+            <button type="button" className={`btn btn-small ${fast ? 'active' : ''}`} onClick={() => setFast(!fast)} aria-pressed={fast}>
+              ⏩ {fast ? '3×' : '1×'}
+            </button>
+            <button type="button" className="btn btn-small" onClick={skip} disabled={phase === 'done'}>⏭ Überspringen</button>
+          </>
+        )}
       </header>
 
       <div
@@ -209,7 +215,9 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
         {phase === 'done' && <div className="stage-banner">8 Karten gesammelt!<small>Das Duell beginnt …</small></div>}
         {phase !== 'done' && sim.gates[picks.length] && (
           <div className="gate-preview" aria-live="polite">
-            {picks.length === FINAL_GATE
+            {layout
+              ? <span className="gate-preview-label">Tor {picks.length + 1} · 2 aus deinem Deck + 1 neutral</span>
+              : picks.length === FINAL_GATE
               ? <span className="gate-preview-label final">★ Finaltor: neue Karten – bei Sieg gehört sie dir</span>
               : <span className="gate-preview-label">Nächstes Tor {picks.length + 1} · aus deinem Deck</span>}
             <div className="gate-preview-cards">
@@ -219,7 +227,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit }
                   id={o.cardId}
                   size="sm"
                   badge={o.kind === 'discovery' ? 'discovery' : null}
-                  badgeText={owned.has(o.cardId) ? '★' : 'NEU'}
+                  badgeText={layout ? 'Neutral' : owned.has(o.cardId) ? '★' : 'NEU'}
                   mod={i === lane && stumbled ? STUMBLE_PENALTY : 0}
                   className={i === lane ? 'lane-active' : ''}
                 />
@@ -320,6 +328,7 @@ function draw(
   reducedMotion: boolean,
   skin: [string, string, string],
   pickedLanes: Map<number, number>,
+  neutral: boolean,
 ) {
   const { w, h } = v;
   ctx.save();
@@ -404,7 +413,7 @@ function draw(
       objs.push({
         z: 0,
         draw: () => g.offers.forEach((offer, lane) => {
-          if (lane !== pickedLanes.get(g.index)) drawCard(ctx, project(0, lane), offer.cardId, offer.kind === 'discovery', false, fade);
+          if (lane !== pickedLanes.get(g.index)) drawCard(ctx, project(0, lane), offer.cardId, offer.kind === 'discovery', '', fade);
         }),
       });
       continue;
@@ -431,7 +440,7 @@ function draw(
           ctx.textAlign = 'center';
           ctx.fillText(g.index === FINAL_GATE ? '★ FINALE ★' : `TOR ${g.index + 1}`, w / 2, mid.y - archH - 6 * mid.p);
         }
-        g.offers.forEach((offer, lane) => drawCard(ctx, project(z, lane), offer.cardId, offer.kind === 'discovery', !owned.has(offer.cardId)));
+        g.offers.forEach((offer, lane) => drawCard(ctx, project(z, lane), offer.cardId, offer.kind === 'discovery', neutral ? 'NEUTRAL' : owned.has(offer.cardId) ? '★ ENTDECKT' : '★ NEU'));
       },
     });
   }
@@ -510,7 +519,8 @@ function drawCard(
   at: { x: number; y: number; p: number; half: number },
   cardId: string,
   discovery: boolean,
-  isNew: boolean,
+  /** Label above discovery cards. */
+  label: string,
   fade = 0,
 ) {
   const c = getCard(cardId);
@@ -587,7 +597,6 @@ function drawCard(
   if (discovery && cw > 24 && fade === 0) {
     const fs = Math.max(9, Math.round(cw * 0.17));
     ctx.font = `800 ${fs}px system-ui, sans-serif`;
-    const label = isNew ? '★ NEU' : '★ ENTDECKT';
     const lw = ctx.measureText(label).width + fs;
     ctx.fillStyle = '#ffcc33';
     roundRect(ctx, at.x - lw / 2, y - fs * 1.55, lw, fs * 1.3, fs * 0.4);

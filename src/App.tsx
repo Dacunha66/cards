@@ -17,9 +17,10 @@ import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
 import { getDb, isAdmin, loadCardRecords, loadGameSettings } from './game/cardStore';
 import { GameSettings, setGameSettings } from './game/settings';
 import { Admin } from './screens/Admin';
+import { League } from './screens/League';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' | 'league' }
   | { name: 'runner'; runId: number; deck: string[] }
   | { name: 'battle'; picks: Pick[] }
   | { name: 'result'; outcome: Outcome; reward: Reward; score: { player: number; cpu: number } };
@@ -54,7 +55,7 @@ export function App() {
   screenRef.current = screen.name;
 
   const applyRecords = useCallback((records: CardRecord[]) => {
-    if (screenRef.current === 'runner' || screenRef.current === 'battle') {
+    if (screenRef.current === 'runner' || screenRef.current === 'battle' || screenRef.current === 'league') {
       pendingRecords.current = records;
       return;
     }
@@ -117,6 +118,15 @@ export function App() {
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} />}
       {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} />}
+      {screen.name === 'league' && (
+        <League
+          save={save}
+          reducedMotion={reducedMotion}
+          skin={getSkin(save.skins.runner).colors}
+          onSaveDeck={(leagueDeck) => setSave((s) => ({ ...s, leagueDeck }))}
+          onExit={toMenu}
+        />
+      )}
       {screen.name === 'admin' && (
         <Admin onCatalogChange={applyRecords} onSettingsChange={(s: GameSettings) => setGameSettings(s)} onBack={toMenu} />
       )}

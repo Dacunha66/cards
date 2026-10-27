@@ -15,7 +15,7 @@ export function chooseCpuMove(state: BattleState, rng: Rng): Move {
     // Defensive bonus: strong values facing empty cells, small penalty for weak exposed sides.
     let defense = 0;
     for (const n of neighbours(move.cell)) {
-      if (state.board[n.cell] === null) defense += cardValue(card, n.mine) - 5;
+      if (state.board[n.cell] === null && !state.rocks.includes(n.cell)) defense += cardValue(card, n.mine) - 5;
     }
     // Keep strong cards for later when nothing can be captured.
     const power = cardValue(card, 'top') + cardValue(card, 'right') + cardValue(card, 'bottom') + cardValue(card, 'left');

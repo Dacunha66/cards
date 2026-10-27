@@ -711,3 +711,19 @@ label.btn.disabled { opacity: 0.5; }
 .share-input { text-align: center; padding: 6px; }
 .balance-warn { display: block; }
 .gate-preview-label.final { background: var(--accent); color: var(--accent-text); }
+
+/* ---------- League test mode ---------- */
+.btn-league { background: linear-gradient(180deg, #3b2f7a, #241c55); border-color: #8b7bff; }
+.cell.rock { display: grid; place-items: center; font-size: clamp(26px, 8vw, 44px); background: repeating-linear-gradient(45deg, #2b2840, #2b2840 6px, #252238 6px, #252238 12px); cursor: default; }
+.round-label { margin: 0; text-align: center; font-weight: 800; color: var(--accent); font-size: 14px; }
+.ranked-pill { background: #3b2f7a; white-space: nowrap; }
+.league-intro { display: flex; flex-direction: column; gap: 10px; }
+.break { word-break: break-all; }
+.limit-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.limit-row .chip-mini { font-size: 13px; padding: 4px 10px; }
+.league-errors { margin: 0; padding-left: 28px; display: flex; flex-direction: column; gap: 2px; }
+.league-row { cursor: default; }
+.league-row.in-deck-row { border-color: var(--accent); }
+.copy-stepper { display: grid; grid-template-columns: 40px 26px 40px; gap: 4px; align-items: center; text-align: center; font-size: 18px; }
+.copy-stepper .btn-step { min-height: 40px; }
+.plain-list.center { align-items: center; }

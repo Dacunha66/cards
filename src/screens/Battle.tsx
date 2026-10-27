@@ -3,18 +3,33 @@ import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import {
-  BOARD_SIZE, BattleState, Outcome, Side, applyMove, coinToss, cpuChoosesFirst, createBattle, isGameOver, other, outcome, score,
+  BOARD_SIZE, BattleState, HandCard, Outcome, Side, applyMove, coinToss, cpuChoosesFirst, createBattle, isGameOver, other, outcome, score,
+  totalMoves,
 } from '../game/battle';
 import { chooseCpuMove, drawCpuHand } from '../game/ai';
-import { createRng } from '../game/rng';
+import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
 
 interface Props {
   picks: Pick[];
   unlocked: string[];
   reducedMotion: boolean;
-  onEnd: (outcome: Outcome, score: { player: number; cpu: number }) => void;
+  /** `first` = who actually started (after the coin toss). */
+  onEnd: (outcome: Outcome, score: { player: number; cpu: number }, first: Side) => void;
   onQuit: () => void;
+  /** League round: fixed opponent hand, rock cells, given or tossed start. Without it: adventure duel. */
+  setup?: BattleSetup;
+}
+
+export interface BattleSetup {
+  cpuHand: HandCard[];
+  /** null = coin toss with choice (round 1 and deciders). */
+  first: Side | null;
+  rocks: number[];
+  /** Shown above the board, e.g. "Runde 2 · Stand 1:0". */
+  label: string;
+  tossRng: Rng;
+  finishLabel: string;
 }
 
 /** Centre of a board cell in % of the board (the board padding is small enough to ignore). */
@@ -22,18 +37,19 @@ function cellCenter(cell: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
 }
 
-export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props) {
+export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }: Props) {
   const rng = useMemo(() => createRng(), []);
   const [state, setState] = useState<BattleState>(() =>
-    createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), drawCpuHand(rng), 'player'),
+    createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? []),
   );
-  const [phase, setPhase] = useState<'toss' | 'play'>('toss');
+  const [phase, setPhase] = useState<'toss' | 'play'>(setup?.first ? 'play' : 'toss');
   const [selected, setSelected] = useState<number | null>(null);
-  const [banner, setBanner] = useState<string | null>(null);
+  const [banner, setBanner] = useState<string | null>(setup?.first ? (setup.first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!') : null);
   /** Captured cells still showing their old colour until the flip animation starts. */
   const [pendingFlips, setPendingFlips] = useState<number[]>([]);
   const [showClashes, setShowClashes] = useState(false);
   const ended = useRef(false);
+  const starter = useRef<Side>(setup?.first ?? 'player');
   const over = isGameOver(state);
   const sc = score(state);
   const discoveryIndexes = useMemo(() => new Set(picks.flatMap((p, i) => (p.kind === 'discovery' ? [i] : []))), [picks]);
@@ -72,6 +88,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
   }, [state, over, rng, reducedMotion, phase]);
 
   const start = useCallback((first: Side) => {
+    starter.current = first;
     setState((s) => ({ ...s, turn: first }));
     setPhase('play');
     setBanner(first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!');
@@ -87,7 +104,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
   function finish() {
     if (ended.current) return;
     ended.current = true;
-    onEnd(outcome(state), sc);
+    onEnd(outcome(state), sc, starter.current);
   }
 
   const result = over && !animating ? outcome(state) : null;
@@ -117,12 +134,16 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
 
       <div className="scorebar" aria-live="polite">
         <span key={`p${sc.player}`} className="score blue pop">Du {sc.player}</span>
-        <span className="moves">Zug {Math.min(state.moveCount + 1, 16)}/16</span>
+        <span className="moves">Zug {Math.min(state.moveCount + 1, totalMoves(state))}/{totalMoves(state)}</span>
         <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
       </div>
 
+      {setup && <p className="round-label">{setup.label}</p>}
       <div className={`board ${result ? `ended ${result}` : ''}`} role="grid" aria-label="Spielfeld 4 mal 4">
         {state.board.map((cell, i) => {
+          if (state.rocks.includes(i)) {
+            return <div key={i} role="gridcell" className="cell rock" aria-label="Fels – hier kann niemand legen">🪨</div>;
+          }
           const pending = pendingFlips.includes(i);
           const owner = cell ? (pending ? other(cell.owner) : cell.owner) : null;
           const flipped = !pending && state.lastFlips.includes(i);
@@ -172,12 +193,12 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
           );
         })}
 
-        {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={rng} onDecide={start} />}
+        {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? rng} onDecide={start} />}
         {banner && <div className="board-banner">{banner}</div>}
         {result && (
           <div className={`board-banner end ${result}`}>
             <p>{result === 'win' ? '🏆 Sieg!' : result === 'draw' ? '🤝 Unentschieden' : '💀 Niederlage'}</p>
-            <button type="button" className="btn btn-primary" onClick={finish}>Weiter zur Belohnung</button>
+            <button type="button" className="btn btn-primary" onClick={finish}>{setup?.finishLabel ?? 'Weiter zur Belohnung'}</button>
           </div>
         )}
       </div>
@@ -193,7 +214,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit }: Props)
             owner="player"
             size="sm"
             badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
-            badgeText={unlocked.includes(id) ? '★' : 'NEU'}
+            badgeText={setup ? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
             selected={selected === i}
             onClick={phase === 'play' && state.turn === 'player' && !over ? () => setSelected(selected === i ? null : i) : undefined}
           />
