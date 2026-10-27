@@ -10,7 +10,7 @@ interface Props {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   locked?: boolean;
   badge?: CardBadge;
-  /** Text on the discovery badge (default "NEU"). */
+  /** Kind of discovery marker: "NEU" (not owned yet), "★" (owned), "Neutral" (league). */
   badgeText?: string;
   selected?: boolean;
   showName?: boolean;
@@ -46,7 +46,12 @@ export function Card({ id, owner, size = 'md', locked, badge, badgeText = 'NEU',
       <span className="v v-right">{locked ? '?' : v(c.right)}</span>
       <span className="v v-bottom">{locked ? '?' : v(c.bottom)}</span>
       <span className="gem" aria-hidden="true" />
-      {badge === 'discovery' && <span className="badge">{badgeText}</span>}
+      {badge === 'discovery' && (
+        // Small corner symbol – never on top of a value.
+        <span className={`badge ${badgeText === 'Neutral' ? 'badge-neutral' : badgeText === 'NEU' ? 'badge-new' : ''}`} title={badgeText} aria-label={badgeText === 'Neutral' ? 'neutrale Entdeckung' : badgeText === 'NEU' ? 'neue Karte' : 'Entdeckung'}>
+          {badgeText === 'Neutral' ? '◆' : '★'}
+        </span>
+      )}
       {mod < 0 && <span className="mod-tag">{mod}</span>}
       {showName && <span className="name">{locked ? '???' : c.name}</span>}
     </>

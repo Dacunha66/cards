@@ -241,7 +241,7 @@ export function Runner({ deck, unlocked, reducedMotion, skin, onFinish, onQuit, 
         ))}
         <div className="legend" aria-hidden="true">
           <span><i className="dot silver" /> Deck</span>
-          <span><i className="dot gold" /> Entdeckung</span>
+          {layout ? <span><b className="legend-neutral">◆</b> Neutral</span> : <span><i className="dot gold" /> Entdeckung</span>}
           <span><i className="dot stone" /> Stein: −1</span>
         </div>
       </div>

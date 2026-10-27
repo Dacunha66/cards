@@ -95,6 +95,7 @@ button { font: inherit; color: inherit; }
 
 .muted { color: var(--muted); }
 .hint { text-align: center; color: var(--muted); min-height: 1.3em; margin: 6px 0; font-size: 15px; }
+.play-area .hint { margin: 0; font-size: 14px; line-height: 1.3; }
 .blue { color: var(--player-light); }
 .red { color: #ff8a8a; }
 
@@ -182,11 +183,16 @@ button.card { cursor: pointer; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .card.rarity-common .name { color: var(--text); }
+/* Discovery marker: a small symbol in the free top-left corner, never over a value. */
 .card .badge {
-  position: absolute; z-index: 4; top: -8px; left: -6px;
-  background: var(--accent); color: var(--accent-text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; white-space: nowrap;
+  position: absolute; z-index: 4; top: 2.5%; left: 4%;
+  width: 20cqw; height: 20cqw; min-width: 11px; min-height: 11px; border-radius: 50%;
+  display: grid; place-items: center; line-height: 1;
+  font-size: max(8px, 13cqw); font-weight: 900;
+  background: #7a5a00; color: #fff3b0; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.6);
 }
+.card .badge.badge-new { background: var(--accent); color: var(--accent-text); box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.6), 0 0 6px var(--accent); }
+.card .badge.badge-neutral { background: #0e7490; color: #e0fbff; }
 
 /* Rarity: frame colour, glow and effects grow with the tier. */
 .card.rarity-uncommon { --frame: var(--uncommon); }
@@ -221,7 +227,7 @@ button.card { cursor: pointer; }
 /* Owner colours (duel): body and picture area; the frame keeps showing the rarity. */
 .card.owner-player { --card-bg: linear-gradient(160deg, var(--player), var(--player-dark)); --art-bg: radial-gradient(circle at 50% 38%, var(--player), var(--player-dark)); }
 .card.owner-cpu { --card-bg: linear-gradient(160deg, #f26b6b, var(--red-dark)); --art-bg: radial-gradient(circle at 50% 38%, #f26b6b, var(--red-dark)); }
-.card.discovery { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card.discovery { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), 0 0 10px 1px rgba(255, 204, 51, 0.55); }
 .card.weakened .v { background: rgba(127, 29, 29, 0.92); color: #ffd6d6; }
 .card .mod-tag {
   position: absolute; z-index: 4; bottom: 2%; left: 3%;
@@ -727,3 +733,16 @@ label.btn.disabled { opacity: 0.5; }
 .copy-stepper { display: grid; grid-template-columns: 40px 26px 40px; gap: 4px; align-items: center; text-align: center; font-size: 18px; }
 .copy-stepper .btn-step { min-height: 40px; }
 .plain-list.center { align-items: center; }
+
+/* Duel layout: board and hand always fit the space that is really visible (Safari bars, app header,
+   small iPhones). The play area is a size container; the board width W is chosen so that
+   board (≈1.33·W) + hand (≈0.53·W) + hint fit its height. */
+.battle { overflow: hidden; }
+.play-area { flex: 1 1 0; min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; }
+.play-area .board { width: min(100cqw, calc((100cqh - 36px) / 1.9)); flex-shrink: 0; }
+.play-area .hand { width: calc(min(100cqw, calc((100cqh - 36px) / 1.9)) * 0.8); margin: 0; padding-top: 6px; flex-shrink: 0; }
+/* On very small cards the "−1" tag would touch the bottom value; the red values already show it. */
+@container (max-width: 64px) {
+  .card .mod-tag { display: none; }
+}
+.legend-neutral { color: #22d3ee; margin-right: 3px; }

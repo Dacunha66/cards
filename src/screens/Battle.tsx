@@ -139,86 +139,88 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
       </div>
 
       {setup && <p className="round-label">{setup.label}</p>}
-      <div className={`board ${result ? `ended ${result}` : ''}`} role="grid" aria-label="Spielfeld 4 mal 4">
-        {state.board.map((cell, i) => {
-          if (state.rocks.includes(i)) {
-            return <div key={i} role="gridcell" className="cell rock" aria-label="Fels – hier kann niemand legen">🪨</div>;
-          }
-          const pending = pendingFlips.includes(i);
-          const owner = cell ? (pending ? other(cell.owner) : cell.owner) : null;
-          const flipped = !pending && state.lastFlips.includes(i);
-          const placed = state.lastPlaced === i;
-          const canDrop = phase === 'play' && !cell && selected !== null && state.turn === 'player' && !over && !animating;
-          return (
-            <button
-              key={i}
-              type="button"
-              role="gridcell"
-              className={`cell ${canDrop ? 'droppable' : ''}`}
-              onClick={() => place(i)}
-              disabled={!!cell || over || phase !== 'play'}
-              aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei`}
-            >
-              {cell && owner && (
-                <Card
-                  key={`${cell.cardId}-${owner}`}
-                  id={cell.cardId}
-                  mod={cell.mod}
-                  owner={owner}
-                  size="sm"
-                  className={[
-                    flipped ? 'anim-flip' : placed ? 'anim-drop' : '',
-                    pending ? 'under-attack' : '',
-                    winner && owner === winner ? 'winner-glow' : '',
-                  ].join(' ')}
-                />
-              )}
-            </button>
-          );
-        })}
+      <div className="play-area">
+        <div className={`board ${result ? `ended ${result}` : ''}`} role="grid" aria-label="Spielfeld 4 mal 4">
+          {state.board.map((cell, i) => {
+            if (state.rocks.includes(i)) {
+              return <div key={i} role="gridcell" className="cell rock" aria-label="Fels – hier kann niemand legen">🪨</div>;
+            }
+            const pending = pendingFlips.includes(i);
+            const owner = cell ? (pending ? other(cell.owner) : cell.owner) : null;
+            const flipped = !pending && state.lastFlips.includes(i);
+            const placed = state.lastPlaced === i;
+            const canDrop = phase === 'play' && !cell && selected !== null && state.turn === 'player' && !over && !animating;
+            return (
+              <button
+                key={i}
+                type="button"
+                role="gridcell"
+                className={`cell ${canDrop ? 'droppable' : ''}`}
+                onClick={() => place(i)}
+                disabled={!!cell || over || phase !== 'play'}
+                aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei`}
+              >
+                {cell && owner && (
+                  <Card
+                    key={`${cell.cardId}-${owner}`}
+                    id={cell.cardId}
+                    mod={cell.mod}
+                    owner={owner}
+                    size="sm"
+                    className={[
+                      flipped ? 'anim-flip' : placed ? 'anim-drop' : '',
+                      pending ? 'under-attack' : '',
+                      winner && owner === winner ? 'winner-glow' : '',
+                    ].join(' ')}
+                  />
+                )}
+              </button>
+            );
+          })}
 
-        {showClashes && placedAt && state.lastClashes.map((c) => {
-          const t = cellCenter(c.cell);
-          const x = `${(placedAt.x + t.x) / 2}%`;
-          const y = `${(placedAt.y + t.y) / 2}%`;
-          return (
-            <div key={`${state.moveCount}-${c.cell}`}>
-              <div className={`clash ${c.captured ? 'won' : 'held'}`} style={{ left: x, top: y }}>
-                {c.attack} {c.captured ? '>' : c.attack === c.defense ? '=' : '<'} {c.defense}
+          {showClashes && placedAt && state.lastClashes.map((c) => {
+            const t = cellCenter(c.cell);
+            const x = `${(placedAt.x + t.x) / 2}%`;
+            const y = `${(placedAt.y + t.y) / 2}%`;
+            return (
+              <div key={`${state.moveCount}-${c.cell}`}>
+                <div className={`clash ${c.captured ? 'won' : 'held'}`} style={{ left: x, top: y }}>
+                  {c.attack} {c.captured ? '>' : c.attack === c.defense ? '=' : '<'} {c.defense}
+                </div>
+                {c.captured && !reducedMotion && (
+                  <Burst x={x} y={y} colors={state.board[c.cell]?.owner === 'player' ? ['#fff', '#9cc3ff', '#ffcc33'] : ['#fff', '#ffb0b0', '#ffcc33']} count={12} spread={34} />
+                )}
               </div>
-              {c.captured && !reducedMotion && (
-                <Burst x={x} y={y} colors={state.board[c.cell]?.owner === 'player' ? ['#fff', '#9cc3ff', '#ffcc33'] : ['#fff', '#ffb0b0', '#ffcc33']} count={12} spread={34} />
-              )}
+            );
+          })}
+
+          {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? rng} onDecide={start} />}
+          {banner && <div className="board-banner">{banner}</div>}
+          {result && (
+            <div className={`board-banner end ${result}`}>
+              <p>{result === 'win' ? '🏆 Sieg!' : result === 'draw' ? '🤝 Unentschieden' : '💀 Niederlage'}</p>
+              <button type="button" className="btn btn-primary" onClick={finish}>{setup?.finishLabel ?? 'Weiter zur Belohnung'}</button>
             </div>
-          );
-        })}
+          )}
+        </div>
 
-        {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? rng} onDecide={start} />}
-        {banner && <div className="board-banner">{banner}</div>}
-        {result && (
-          <div className={`board-banner end ${result}`}>
-            <p>{result === 'win' ? '🏆 Sieg!' : result === 'draw' ? '🤝 Unentschieden' : '💀 Niederlage'}</p>
-            <button type="button" className="btn btn-primary" onClick={finish}>{setup?.finishLabel ?? 'Weiter zur Belohnung'}</button>
-          </div>
-        )}
-      </div>
+        <p className="hint" aria-live="polite">{hint}</p>
 
-      <p className="hint" aria-live="polite">{hint}</p>
-
-      <div className="hand" aria-label="Deine Hand">
-        {state.hands.player.map(({ cardId: id, mod }, i) => (
-          <Card
-            key={handOrigin[i]}
-            id={id}
-            mod={mod}
-            owner="player"
-            size="sm"
-            badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
-            badgeText={setup ? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
-            selected={selected === i}
-            onClick={phase === 'play' && state.turn === 'player' && !over ? () => setSelected(selected === i ? null : i) : undefined}
-          />
-        ))}
+        <div className="hand" aria-label="Deine Hand">
+          {state.hands.player.map(({ cardId: id, mod }, i) => (
+            <Card
+              key={handOrigin[i]}
+              id={id}
+              mod={mod}
+              owner="player"
+              size="sm"
+              badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
+              badgeText={setup ? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
+              selected={selected === i}
+              onClick={phase === 'play' && state.turn === 'player' && !over ? () => setSelected(selected === i ? null : i) : undefined}
+            />
+          ))}
+        </div>
       </div>
     </main>
   );
