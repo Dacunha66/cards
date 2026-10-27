@@ -1,6 +1,7 @@
 // All 100 cards of Project Card Rush. Names and art are original placeholders.
 // Strength follows rarity: each rarity has a fixed range for the sum of the four values.
 import { Rng, pickWeighted } from './rng';
+import { CardClass, EFFECTS, EffectId } from './effects';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
@@ -31,6 +32,10 @@ export interface CardDef {
   inRunner?: boolean;
   /** true: only obtainable as a duel reward – never in booster packs (default false). */
   rewardOnly?: boolean;
+  /** Class (Krieger, Magier, …). Alone it gives no bonus. */
+  cls?: CardClass;
+  /** At most one special effect from the central list (effects.ts). */
+  effect?: EffectId;
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = {
@@ -156,9 +161,23 @@ const ROWS: Row[] = [
   ['m04', 'Urdrache Ignivor', 'mythic', 10, 4, 5, 10, '🐲', 0],
 ];
 
+/** Suggested class per card (by name and picture). Cards not listed here start as Krieger. */
+export const SUGGESTED_CLASS: Record<string, CardClass> = {
+  ...Object.fromEntries('c03 c05 c16 c24 c30 u01 u02 u05 u15 u16 u20 u21 u22 r01 r04 r13 r19 r20 e03 e08 e14 l08 m03'.split(' ').map((id) => [id, 'krieger' as CardClass])),
+  ...Object.fromEntries('c18 c22 u03 u04 u11 u13 u19 r02 r05 r17 e04 e07 e10 e11 e12 l02 l07 m01 m02 k001'.split(' ').map((id) => [id, 'magier' as CardClass])),
+  ...Object.fromEntries('c01 c06 c08 c09 c11 c12 c14 c17 c19 c20 c21 c28 u06 u07 u08 u09 u10 u12 u14 r06 r15 e05 l03'.split(' ').map((id) => [id, 'natur' as CardClass])),
+  ...Object.fromEntries('c02 c07 c26 u23 r07 e01 e13 l05 m04'.split(' ').map((id) => [id, 'feuer' as CardClass])),
+  ...Object.fromEntries('c10 c15 c25 c29 u17 u18 r08 r11 r14 r16 e02 l01 l06'.split(' ').map((id) => [id, 'frost' as CardClass])),
+  ...Object.fromEntries('c04 c13 c23 c27 u24 r03 r09 r10 r12 r18 e06 e09 l04'.split(' ').map((id) => [id, 'schatten' as CardClass])),
+};
+
+export function suggestedClass(id: string): CardClass {
+  return SUGGESTED_CLASS[id] ?? 'krieger';
+}
+
 /** The 100 cards shipped with the game – used when no card database is reachable. */
 export const BUILTIN_CARDS: readonly CardDef[] = ROWS.map(([id, name, rarity, top, right, bottom, left, art, hue]) => ({
-  id, name, rarity, top, right, bottom, left, art, hue,
+  id, name, rarity, top, right, bottom, left, art, hue, cls: suggestedClass(id),
 }));
 
 /**
@@ -226,6 +245,16 @@ export const DECK_SIZE = 20;
 
 export function cardPower(c: CardDef): number {
   return c.top + c.right + c.bottom + c.left;
+}
+
+/** Strength of the card's effect in Σ points (0 without effect). */
+export function effectValue(c: Pick<CardDef, 'effect'>): number {
+  return c.effect ? EFFECTS[c.effect].value : 0;
+}
+
+/** Value sum plus effect strength – used for balancing. */
+export function cardScore(c: CardDef): number {
+  return Math.round((cardPower(c) + effectValue(c)) * 10) / 10;
 }
 
 /**

@@ -1,5 +1,6 @@
 // Card records as stored in the card database (admin dashboard) and how they turn into game cards.
-import { BUILTIN_CARDS, CARD_ID_RE, CardDef, DECK_SIZE, RARITIES, RARITY_ORDER, RARITY_POWER, Rarity, STARTER_DECK, cardPower } from './cards';
+import { BUILTIN_CARDS, CARD_ID_RE, CardDef, DECK_SIZE, RARITIES, RARITY_ORDER, RARITY_POWER, Rarity, STARTER_DECK, cardPower, suggestedClass } from './cards';
+import { CardClass, EFFECTS, EffectId, isCardClass, isEffectId } from './effects';
 
 export type CardStatus = 'draft' | 'active' | 'disabled';
 
@@ -32,6 +33,10 @@ export interface CardRecord {
   inRunner: boolean;
   /** Only obtainable as a duel reward (never in booster packs). */
   rewardOnly: boolean;
+  /** Every card has exactly one class. */
+  cls: CardClass;
+  /** At most one effect, and only one that belongs to the class. */
+  effect: EffectId | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,6 +64,9 @@ export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
   const values = VALUE_KEYS.map((k) => clampValue(r[k]));
   if (values.some((v) => v === null)) return null;
   const [top, right, bottom, left] = values as number[];
+  // Older documents have no class yet: they get the suggested one. An effect must fit the class.
+  const cls = isCardClass(r.cls) ? r.cls : suggestedClass(id);
+  const effect = isEffectId(r.effect) && EFFECTS[r.effect].cls === cls ? r.effect : null;
   const hue = typeof r.hue === 'number' && Number.isFinite(r.hue) ? ((Math.round(r.hue) % 360) + 360) % 360 : 260;
   return {
     id,
@@ -73,6 +81,8 @@ export function parseCardRecord(id: string, raw: unknown): CardRecord | null {
     // Older documents have no flags: they keep the previous behaviour.
     inRunner: r.inRunner !== false,
     rewardOnly: r.rewardOnly === true,
+    cls,
+    effect,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : '',
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : '',
   };
@@ -104,6 +114,8 @@ export function recordToCard(rec: CardRecord): CardDef {
     description: rec.description || undefined,
     inRunner: rec.inRunner,
     rewardOnly: rec.rewardOnly,
+    cls: rec.cls,
+    effect: rec.effect ?? undefined,
   };
 }
 
@@ -112,7 +124,7 @@ export function builtinRecords(now = new Date().toISOString()): CardRecord[] {
   return BUILTIN_CARDS.map((c) => ({
     id: c.id, name: c.name, rarity: c.rarity, top: c.top, right: c.right, bottom: c.bottom, left: c.left,
     art: c.art, hue: c.hue, description: c.description ?? '', status: 'active', imageId: null, inRunner: true, rewardOnly: false,
-    createdAt: now, updatedAt: now,
+    cls: c.cls ?? suggestedClass(c.id), effect: c.effect ?? null, createdAt: now, updatedAt: now,
   }));
 }
 
@@ -129,7 +141,8 @@ export function nextCardId(existing: Iterable<string>): string {
 export function newRecord(id: string, now = new Date().toISOString()): CardRecord {
   return {
     id, name: '', rarity: 'common', top: 4, right: 4, bottom: 4, left: 4,
-    art: '🃏', hue: 260, description: '', status: 'draft', imageId: null, inRunner: true, rewardOnly: false, createdAt: now, updatedAt: now,
+    art: '🃏', hue: 260, description: '', status: 'draft', imageId: null, inRunner: true, rewardOnly: false,
+    cls: 'krieger', effect: null, createdAt: now, updatedAt: now,
   };
 }
 
@@ -190,11 +203,23 @@ export function repairDeck(deck: string[], unlocked: string[], activeCards: read
   return { deck: result, unlocked: newUnlocked };
 }
 
-/** Recommended sum of the four values for a rarity (a hint in the editor, not a rule). */
-export function powerHint(rec: Pick<CardRecord, ValueKey | 'rarity'>): { sum: number; min: number; max: number; ok: boolean } {
+/** Strength of a record's effect in Σ points (0 without effect). */
+export function recordEffectValue(r: { effect?: EffectId | null }): number {
+  return r.effect ? EFFECTS[r.effect].value : 0;
+}
+
+/**
+ * Recommended strength for a rarity (a hint in the editor, not a rule). `total` = value sum plus
+ * effect strength, e.g. Arkane Kraft counts as +4.
+ */
+export function powerHint(rec: Pick<CardRecord, ValueKey | 'rarity'> & { effect?: EffectId | null }): {
+  sum: number; effect: number; total: number; min: number; max: number; ok: boolean;
+} {
   const sum = rec.top + rec.right + rec.bottom + rec.left;
+  const effect = recordEffectValue(rec);
+  const total = Math.round((sum + effect) * 10) / 10;
   const [min, max] = RARITY_POWER[rec.rarity];
-  return { sum, min, max, ok: sum >= min && sum <= max };
+  return { sum, effect, total, min, max, ok: total >= min && total <= max };
 }
 
 /** A card counts as conspicuous when its total differs this much from the average of its rarity. */
@@ -210,8 +235,9 @@ export interface CardBalance {
   flag: 'strong' | 'weak' | null;
 }
 
-export function cardSum(r: Pick<CardRecord, ValueKey>): number {
-  return r.top + r.right + r.bottom + r.left;
+/** Total strength: the four values plus the effect strength (Σ points). */
+export function cardSum(r: Pick<CardRecord, ValueKey> & { effect?: EffectId | null }): number {
+  return Math.round((r.top + r.right + r.bottom + r.left + recordEffectValue(r)) * 10) / 10;
 }
 
 /**

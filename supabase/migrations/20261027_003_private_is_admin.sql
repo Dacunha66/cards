@@ -45,4 +45,17 @@ create policy "card images: admins change" on storage.objects
 create policy "card images: admins delete" on storage.objects
   for delete to authenticated using (bucket_id = 'card-images' and (select private.is_admin()));
 
+drop policy "arenas: everyone reads active arenas, admins read all" on public.arenas;
+drop policy "arenas: admins insert" on public.arenas;
+drop policy "arenas: admins update" on public.arenas;
+drop policy "arenas: admins delete" on public.arenas;
+create policy "arenas: everyone reads active arenas, admins read all" on public.arenas
+  for select to anon, authenticated using (status = 'active' or (select private.is_admin()));
+create policy "arenas: admins insert" on public.arenas
+  for insert to authenticated with check ((select private.is_admin()));
+create policy "arenas: admins update" on public.arenas
+  for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "arenas: admins delete" on public.arenas
+  for delete to authenticated using ((select private.is_admin()));
+
 drop function public.is_admin();

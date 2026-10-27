@@ -4,6 +4,7 @@
 // every function degrades to "no database" and the game uses its built-in cards.
 import { CardRecord, parseCardRecord, recordToDoc } from './catalog';
 import { GameSettings, parseSettings } from './settings';
+import { ARENAS_COLLECTION, Arena, arenaToDoc, parseArena } from './arenas';
 
 export const CARDS_COLLECTION = 'cards';
 /** Admin game settings live in one document: `settings/game`. */
@@ -101,6 +102,28 @@ export async function loadGameSettings(db: Db | null): Promise<GameSettings | nu
 
 export async function saveGameSettings(db: Db, settings: GameSettings): Promise<void> {
   await db.collection(SETTINGS_COLLECTION).doc(SETTINGS_DOC).set({ discoveryShares: { ...settings.discoveryShares }, updatedAt: new Date().toISOString() });
+}
+
+/** Arenas saved by the admin. null = no database (the built-in arenas apply). */
+export async function loadArenas(db: Db | null): Promise<Arena[] | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(ARENAS_COLLECTION).get();
+    return snap.docs.flatMap((d) => {
+      const a = d.exists ? parseArena(d.id, d.data()) : null;
+      return a ? [a] : [];
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function saveArena(db: Db, arena: Arena): Promise<void> {
+  await db.collection(ARENAS_COLLECTION).doc(arena.id).set(arenaToDoc(arena));
+}
+
+export async function deleteArena(db: Db, id: string): Promise<void> {
+  await db.collection(ARENAS_COLLECTION).doc(id).delete();
 }
 
 export async function deleteCardRecord(db: Db, id: string): Promise<void> {

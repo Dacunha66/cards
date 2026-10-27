@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { BUILTIN_CARDS, CARDS, STARTER_DECK, getCard, isCardId, setCardCatalog } from '../src/game/cards';
 import {
-  CardRecord, MIN_ACTIVE_CARDS, buildCatalog, builtinRecords, duplicateRecord, newRecord, nextCardId, parseCardRecord,
+  CardRecord, MIN_ACTIVE_CARDS, buildCatalog, cardSum, builtinRecords, duplicateRecord, newRecord, nextCardId, parseCardRecord,
   powerHint, recordToCard, repairDeck,
 } from '../src/game/catalog';
 import { cropToPortrait, deleteCardRecord, loadCardRecords, saveCardRecord } from '../src/game/cardStore';
@@ -52,8 +52,28 @@ describe('Karten-IDs, Duplizieren, Stärke-Hinweis', () => {
   });
 
   it('Stärke-Hinweis kennt die empfohlene Summe je Seltenheit', () => {
-    expect(powerHint({ rarity: 'common', top: 4, right: 4, bottom: 4, left: 3 })).toEqual({ sum: 15, min: 13, max: 16, ok: true });
+    expect(powerHint({ rarity: 'common', top: 4, right: 4, bottom: 4, left: 3 })).toEqual({ sum: 15, effect: 0, total: 15, min: 13, max: 16, ok: true });
     expect(powerHint({ rarity: 'common', top: 9, right: 9, bottom: 9, left: 9 }).ok).toBe(false);
+  });
+
+  it('Effektstärke zählt mit: Arkane Kraft wie +4', () => {
+    expect(powerHint({ rarity: 'common', top: 4, right: 4, bottom: 4, left: 3, effect: 'arkane_kraft' })).toMatchObject({ sum: 15, effect: 4, total: 19, ok: false });
+    expect(cardSum({ top: 4, right: 4, bottom: 4, left: 3, effect: 'kampfgeist' })).toBe(17.1);
+  });
+
+  it('Klasse und Effekt: alte Karten bekommen eine Klasse, unpassende Effekte werden verworfen', () => {
+    const base = { name: 'Test', rarity: 'common', top: 4, right: 4, bottom: 4, left: 4, status: 'active' };
+    expect(parseCardRecord('c01', base)).toMatchObject({ cls: 'natur', effect: null });
+    expect(parseCardRecord('k050', base)).toMatchObject({ cls: 'krieger', effect: null });
+    expect(parseCardRecord('k050', { ...base, cls: 'magier', effect: 'arkane_kraft' })).toMatchObject({ cls: 'magier', effect: 'arkane_kraft' });
+    expect(parseCardRecord('k050', { ...base, cls: 'feuer', effect: 'arkane_kraft' })).toMatchObject({ cls: 'feuer', effect: null });
+    expect(parseCardRecord('k050', { ...base, cls: 'drache', effect: 'gibtsnicht' })).toMatchObject({ cls: 'krieger', effect: null });
+    const card = recordToCard(parseCardRecord('k050', { ...base, cls: 'schatten', effect: 'schwaechender_blick' })!);
+    expect(card).toMatchObject({ cls: 'schatten', effect: 'schwaechender_blick' });
+  });
+
+  it('jede eingebaute Karte hat eine Klasse', () => {
+    for (const r of builtinRecords()) expect(r.cls, r.id).toBeTruthy();
   });
 });
 

@@ -23,6 +23,9 @@ Tipp: In Safari über **Teilen → „Zum Home-Bildschirm“** bekommst du ein A
   - **⏩** = 3× schneller, **⏭ Überspringen** = sofort alle Tore auf der aktuellen Spur nehmen
 - **Münzwurf:** Vor jedem Duell wird eine Münze geworfen. Gewinnst du, wählst du, wer beginnt (Tipp: Wer die letzte Karte legt, hat oft einen Vorteil).
 - **Duell:** Tippe eine Handkarte an, dann ein freies Feld. Ist dein Wert auf der Seite zur gegnerischen Nachbarkarte **höher**, gehört sie dir. Nach 16 Zügen gewinnt, wer mehr Felder hat.
+- **Klassen & Effekte:** Jede Karte hat eine Klasse (Symbol unten rechts: ⚔️ Krieger, 🔮 Magier, 🌿 Natur, 🔥 Feuer, ❄️ Frost, 🌑 Schatten). Karten mit **Spezialeffekt** haben einen goldenen Ring um das Symbol. Effekte gelten nur im laufenden Duell. **Grüne Werte** = verstärkt, **rote** = geschwächt, 🛡 = Schild. **Tippe eine Karte auf dem Feld an**, um Klasse, Effekt und alle Änderungen zu sehen.
+- **Arenen & Gelände:** Felder mit farbigem Rand sind Gelände (🌲 Wald, 🌋 Lava, ❄️ Eis, 🌑 Schatten). Gelände hilft nur Karten mit passendem Effekt.
+- **Schwächender Blick:** Liegen mehrere Gegner daneben, leuchten sie rot – tippe die Karte an, die −1 bekommen soll.
 - **Belohnung:** Sieg = 🪙 100 und die seltenste neue Entdeckung wird freigeschaltet. Unentschieden = 🪙 40. Niederlage = 🪙 15.
 - **Shop:** Mit Münzen kaufst du **Booster-Packs** (Abenteurer-Pack 🪙 150, Helden-Pack 🪙 400 mit garantierter epischer oder legendärer Karte) und **Skins** (Kartenfarbe im Duell, Figur im Lauf). Doppelte Karten aus Packs werden in Münzen umgetauscht.
 - **Karten:** 100 Karten in 6 Seltenheiten. Je seltener, desto stärker (Summe der vier Werte): gewöhnlich 13–16, ungewöhnlich 17–19, selten 20–22, episch 23–25, legendär 26–28, **mystisch 29–32** (sehr selten, Regenbogen-Rahmen).
@@ -44,13 +47,16 @@ Im Hauptmenü erscheint für dich (Besitzer der Spielseite) der Knopf **🛠️ 
 2. **Kartenname** eingeben.
 3. **📷 Bild hochladen** → Foto aus der Mediathek wählen oder fotografieren. Es wird automatisch auf das Kartenformat 3:4 zugeschnitten.
 4. **Seltenheit** wählen und die **vier Werte** (Oben, Rechts, Unten, Links, je 1–10) mit − / + einstellen. Das Feld Σ zeigt, ob die Summe zur Seltenheit passt (nur ein Hinweis).
-5. Optional eine **Beschreibung** eingeben.
-6. **Status**: *Entwurf* (nur in der Verwaltung sichtbar), *Aktiv* (sofort im Spiel), *Deaktiviert* (nicht mehr im Spiel).
-7. **Speichern**. Oben links siehst du die ganze Zeit eine Live-Vorschau.
+5. **Klasse** wählen (6 Knöpfe) und optional einen **Spezialeffekt** („Kein Spezialeffekt“ ist möglich). Es stehen nur Effekte der gewählten Klasse zur Wahl; darunter siehst du Regeltext, eine Wertvorschau und wie stark der Effekt fürs Balancing zählt (z. B. Arkane Kraft wie +4).
+6. Optional eine **Beschreibung** eingeben.
+7. **Status**: *Entwurf* (nur in der Verwaltung sichtbar), *Aktiv* (sofort im Spiel), *Deaktiviert* (nicht mehr im Spiel).
+8. **Speichern**. Oben links siehst du die ganze Zeit eine Live-Vorschau.
 
 **Balancing (Reiter „Balancing“)**: Übersicht aller Karten mit Gesamtpunktzahl Σ, sortierbar nach Stärke, Seltenheit oder Abweichung. ⚠️ markiert Karten, die 3+ Punkte stärker/schwächer sind als der Schnitt ihrer Seltenheit. Mit **⏸ Aus dem Spiel nehmen** pausierst du eine Karte, ohne sie zu löschen.
 
 **Lauf (Reiter „Lauf“)**: Wie oft jede Seltenheit im Finaltor erscheint (Gewichte + Prozentanzeige, „Standardwerte“ setzt alles zurück). Pro Karte stellst du im Editor ein, ob sie im Lauf erscheinen darf und ob sie **nur durch Belohnung** (nicht in Booster-Packs) zu bekommen ist.
+
+**Arenen (Reiter „Arenen“)**: Vorlagen mit 16 Feldern. Gelände wählen und Felder antippen. „Rangliste“ geht nur, wenn die Arena fair ist (spiegelgleich, kein Gelände nur einmal, höchstens 8 Geländefelder). Abenteuer-Duelle nutzen eine zufällige aktive Arena, Liga-Runden eine Ranglisten-Arena – für beide Spieler dieselbe. Die 6 Standard-Arenen kannst du ändern oder deaktivieren; „↺ Standard wiederherstellen“ macht das rückgängig.
 
 **Bearbeiten, duplizieren, löschen**: Karte in der Liste antippen. Mit der Suche und den Filtern (Status, Seltenheit, Sortierung) findest du Karten schnell.
 

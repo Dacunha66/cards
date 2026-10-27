@@ -3,9 +3,13 @@ import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import {
-  BOARD_SIZE, BattleState, HandCard, Outcome, Side, applyMove, coinToss, cpuChoosesFirst, createBattle, isGameOver, other, outcome, score,
-  totalMoves,
+  BOARD_SIZE, BattleState, HandCard, Outcome, Side, applyMove, blickTargets, cellBreakdown, coinToss, cpuChoosesFirst, createBattle, isGameOver,
+  other, outcome, score, totalMoves,
 } from '../game/battle';
+import { Arena, pickArena } from '../game/arenas';
+import { CLASS_INFO, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
+import { getCard } from '../game/cards';
+import { CardInspect } from '../components/CardInspect';
 import { chooseCpuMove, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
@@ -26,6 +30,8 @@ export interface BattleSetup {
   /** null = coin toss with choice (round 1 and deciders). */
   first: Side | null;
   rocks: number[];
+  /** Arena of this round (the same for both players). */
+  arena: Arena;
   /** Shown above the board, e.g. "Runde 2 · Stand 1:0". */
   label: string;
   tossRng: Rng;
@@ -39,9 +45,16 @@ function cellCenter(cell: number): { x: number; y: number } {
 
 export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }: Props) {
   const rng = useMemo(() => createRng(), []);
+  // Adventure duels take a random active arena; league rounds bring their own.
+  const arena = useMemo(() => setup?.arena ?? pickArena(rng), [setup, rng]);
   const [state, setState] = useState<BattleState>(() =>
-    createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? []),
+    createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells),
   );
+  /** Board card whose details are open. */
+  const [inspect, setInspect] = useState<number | null>(null);
+  /** "Schwächender Blick" waiting for its target: chosen cell and possible targets. */
+  const [targeting, setTargeting] = useState<{ cell: number; targets: number[] } | null>(null);
+  const terrainsUsed = useMemo(() => [...new Set(arena.cells)].filter((t): t is Exclude<Terrain, 'normal'> => t !== 'normal'), [arena]);
   const [phase, setPhase] = useState<'toss' | 'play'>(setup?.first ? 'play' : 'toss');
   const [selected, setSelected] = useState<number | null>(null);
   const [banner, setBanner] = useState<string | null>(setup?.first ? (setup.first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!') : null);
@@ -68,7 +81,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   useEffect(() => {
     if (state.lastPlaced === null) return;
     setPendingFlips(state.lastFlips);
-    setShowClashes(state.lastClashes.length > 0);
+    setShowClashes(state.lastClashes.length > 0 || state.lastEvents.length > 0);
     const flip = setTimeout(() => setPendingFlips([]), 550 * fxTime);
     const hide = setTimeout(() => setShowClashes(false), 1300 * fxTime + 300);
     return () => {
@@ -80,7 +93,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   // Computer turn.
   useEffect(() => {
     if (phase !== 'play' || over || state.turn !== 'cpu') return;
-    const delay = reducedMotion ? 450 : state.lastClashes.length > 0 ? 1250 : 800;
+    const delay = reducedMotion ? 450 : state.lastClashes.length > 0 || state.lastEvents.length > 0 ? 1250 : 800;
     const t = setTimeout(() => {
       setState((s) => (s.turn === 'cpu' && !isGameOver(s) ? applyMove(s, chooseCpuMove(s, rng)) : s));
     }, delay);
@@ -94,11 +107,28 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
     setBanner(first === 'player' ? 'Du beginnst!' : 'Der Gegner beginnt!');
   }, []);
 
-  function place(cell: number) {
-    if (phase !== 'play' || over || animating || state.turn !== 'player' || selected === null || state.board[cell]) return;
-    setState(applyMove(state, { handIndex: selected, cell }));
-    setHandOrigin(handOrigin.filter((_, i) => i !== selected));
+  function play(handIndex: number, cell: number, target?: number) {
+    setState(applyMove(state, { handIndex, cell, target }));
+    setHandOrigin(handOrigin.filter((_, i) => i !== handIndex));
     setSelected(null);
+    setTargeting(null);
+  }
+
+  function tapCell(cell: number) {
+    if (targeting) {
+      if (targeting.targets.includes(cell) && selected !== null) play(selected, targeting.cell, cell);
+      else setTargeting(null);
+      return;
+    }
+    if (state.board[cell]) {
+      setInspect(cell);
+      return;
+    }
+    if (phase !== 'play' || over || animating || state.turn !== 'player' || selected === null) return;
+    // With several enemies next to the cell, "Schwächender Blick" asks for its target first.
+    const targets = blickTargets(state.board, cell, state.hands.player[selected], 'player');
+    if (targets.length > 1) setTargeting({ cell, targets });
+    else play(selected, cell);
   }
 
   function finish() {
@@ -109,15 +139,21 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
 
   const result = over && !animating ? outcome(state) : null;
   const winner: Side | null = result === 'win' ? 'player' : result === 'loss' ? 'cpu' : null;
+  const selectedDef = selected !== null && state.hands.player[selected] ? getCard(state.hands.player[selected].cardId) : null;
+  const selectedEffect = selectedDef?.effect ? EFFECTS[selectedDef.effect] : null;
   const hint = phase === 'toss'
     ? 'Ein Münzwurf entscheidet, wer wählen darf.'
     : over
       ? ''
-      : state.turn === 'cpu'
-        ? 'Der Gegner überlegt …'
-        : selected === null
-          ? 'Wähle eine Karte aus deiner Hand.'
-          : 'Tippe auf ein freies Feld.';
+      : targeting
+        ? '👁 Ziel für −1 antippen · anderes Feld = zurück'
+        : state.turn === 'cpu'
+          ? 'Der Gegner überlegt …'
+          : selected === null
+            ? 'Karte wählen · Feldkarte antippen = Details'
+            : selectedEffect
+              ? `${CLASS_INFO[selectedEffect.cls].icon} ${selectedEffect.name}: ${selectedEffect.short}`
+              : 'Tippe auf ein freies Feld.';
   const placedAt = state.lastPlaced !== null ? cellCenter(state.lastPlaced) : null;
 
   return (
@@ -139,6 +175,11 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
       </div>
 
       {setup && <p className="round-label">{setup.label}</p>}
+      {terrainsUsed.length > 0 && (
+        <p className="arena-label">
+          {arena.name}: {terrainsUsed.map((t) => <span key={t} className={`terrain-chip terrain-${t}`}>{TERRAIN_INFO[t].icon} {TERRAIN_INFO[t].label}</span>)}
+        </p>
+      )}
       <div className="play-area">
         <div className={`board ${result ? `ended ${result}` : ''}`} role="grid" aria-label="Spielfeld 4 mal 4">
           {state.board.map((cell, i) => {
@@ -149,22 +190,28 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
             const owner = cell ? (pending ? other(cell.owner) : cell.owner) : null;
             const flipped = !pending && state.lastFlips.includes(i);
             const placed = state.lastPlaced === i;
-            const canDrop = phase === 'play' && !cell && selected !== null && state.turn === 'player' && !over && !animating;
+            const canDrop = phase === 'play' && !cell && selected !== null && state.turn === 'player' && !over && !animating && !targeting;
+            const terrain = state.terrain[i];
+            const info = cell ? cellBreakdown(state.board, state.terrain, i) : null;
+            const isTarget = targeting?.targets.includes(i);
             return (
               <button
                 key={i}
                 type="button"
                 role="gridcell"
-                className={`cell ${canDrop ? 'droppable' : ''}`}
-                onClick={() => place(i)}
-                disabled={!!cell || over || phase !== 'play'}
-                aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei`}
+                className={`cell terrain-${terrain} ${canDrop ? 'droppable' : ''} ${isTarget ? 'targetable' : ''} ${targeting?.cell === i ? 'pending' : ''}`}
+                onClick={() => tapCell(i)}
+                disabled={!cell && (over || phase !== 'play')}
+                aria-label={cell ? undefined : `Feld ${Math.floor(i / 4) + 1}-${(i % 4) + 1} frei${terrain !== 'normal' ? `, ${TERRAIN_INFO[terrain].label}` : ''}`}
               >
+                {!cell && terrain !== 'normal' && <span className="terrain-icon" aria-hidden="true">{TERRAIN_INFO[terrain].icon}</span>}
                 {cell && owner && (
                   <Card
                     key={`${cell.cardId}-${owner}`}
                     id={cell.cardId}
                     mod={cell.mod}
+                    values={info!.values}
+                    shield={info!.barrier}
                     owner={owner}
                     size="sm"
                     className={[
@@ -194,6 +241,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
             );
           })}
 
+          {showClashes && state.lastEvents.map((e, k) => {
+            const p = cellCenter(e.cell);
+            return (
+              <div key={`${state.moveCount}-fx-${k}`} className={`fx-pop ${e.kind}`} style={{ left: `${p.x}%`, top: `${p.y - 12}%` }}>{e.text}</div>
+            );
+          })}
+
           {phase === 'toss' && <CoinToss reducedMotion={reducedMotion} rng={setup?.tossRng ?? rng} onDecide={start} />}
           {banner && <div className="board-banner">{banner}</div>}
           {result && (
@@ -217,11 +271,14 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
               badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
               badgeText={setup ? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
               selected={selected === i}
-              onClick={phase === 'play' && state.turn === 'player' && !over ? () => setSelected(selected === i ? null : i) : undefined}
+              onClick={phase === 'play' && state.turn === 'player' && !over ? () => { setTargeting(null); setSelected(selected === i ? null : i); } : undefined}
             />
           ))}
         </div>
       </div>
+      {inspect !== null && state.board[inspect] && (
+        <CardInspect board={state.board} terrain={state.terrain} cell={inspect} onClose={() => setInspect(null)} />
+      )}
     </main>
   );
 }

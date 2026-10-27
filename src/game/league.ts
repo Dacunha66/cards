@@ -4,7 +4,8 @@
 import { CARDS, CardDef, Rarity } from './cards';
 import { Rng, createRng, shuffle } from './rng';
 import { FIRST_GATE, GATE_COUNT, GATE_SPACING, Gate, LANES, Offer, RunnerLayout, generateObstacles } from './runner';
-import { CELL_COUNT } from './battle';
+import { NORMAL_TERRAIN, randomRock } from './battle';
+import { Terrain } from './effects';
 
 /** Neutral discoveries: mid-strength cards only, the same for both players. */
 export const NEUTRAL_RARITIES: Rarity[] = ['common', 'uncommon', 'rare'];
@@ -92,9 +93,9 @@ export function leagueLayout(seed: string, playerKey: string, deck: readonly str
   return { gates, obstacles: generateObstacles(deriveRng(seed, 'stones')) };
 }
 
-/** The rock cell of a round (same rule for both players, recomputable from the seed). */
-export function roundRock(seed: string, round: number): number {
-  return Math.floor(deriveRng(seed, `rock:${round}`)() * CELL_COUNT);
+/** The rock cell of a round (same rule for both players, recomputable from the seed) – always on a normal cell. */
+export function roundRock(seed: string, round: number, terrain: readonly Terrain[] = NORMAL_TERRAIN): number {
+  return randomRock(deriveRng(seed, `rock:${round}`), terrain);
 }
 
 /** Coin toss of a round from the seed (round 1 and every decider). */

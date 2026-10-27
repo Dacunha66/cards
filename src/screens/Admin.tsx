@@ -4,7 +4,7 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { BUILTIN_CARDS, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity } from '../game/cards';
 import {
   CardRecord, CardStatus, DESCRIPTION_MAX, MIN_ACTIVE_CARDS, NAME_MAX, STATUSES, STATUS_LABEL, VALUE_KEYS, ValueKey,
-  balanceReport, builtinRecords, duplicateRecord, newRecord, nextCardId, powerHint, recordToCard,
+  balanceReport, builtinRecords, cardSum, duplicateRecord, newRecord, nextCardId, powerHint, recordToCard,
 } from '../game/catalog';
 import {
   Assets, CARDS_COLLECTION, Db, deleteCardRecord, describeError, getAssets, getDb, isAdmin, loadGameSettings, parseDocs, prepareCardImage,
@@ -12,6 +12,8 @@ import {
 } from '../game/cardStore';
 import { GameSettings, defaultSettings } from '../game/settings';
 import { BalanceView, RunnerSettingsView } from './AdminBalance';
+import { ArenaView } from './AdminArenas';
+import { CLASSES, CLASS_INFO, CardClass, EFFECTS, EffectId, effectPreview, effectsForClass } from '../game/effects';
 
 interface Props {
   /** Called with the live card list so the game picks up changes right away. */
@@ -21,8 +23,8 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen' };
 
 type SortKey = 'id' | 'name' | 'rarity' | 'updated';
 
@@ -154,6 +156,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onBack }: Props) {
           />
         ) : <p className="muted center">Einstellungen werden geladen …</p>
       )}
+      {tab === 'arenas' && records && records.length > 0 && <ArenaView db={db!} onToast={setToast} />}
       {toast && <div className="admin-toast" role="status">{toast}</div>}
     </main>
   );
@@ -181,6 +184,7 @@ function CardList({ records, db, onToast, onNew, onOpen }: {
   const [query, setQuery] = useState('');
   const [rarity, setRarity] = useState<Rarity | 'all'>('all');
   const [status, setStatus] = useState<CardStatus | 'all'>('all');
+  const [cls, setCls] = useState<CardClass | 'all' | 'effect'>('all');
   const [sort, setSort] = useState<SortKey>('rarity');
   const [importing, setImporting] = useState<number | null>(null);
 
@@ -195,7 +199,9 @@ function CardList({ records, db, onToast, onNew, onOpen }: {
     const list = (records ?? []).filter((r) =>
       (rarity === 'all' || r.rarity === rarity) &&
       (status === 'all' || r.status === status) &&
-      (!q || r.name.toLowerCase().includes(q) || r.id.includes(q) || r.description.toLowerCase().includes(q)),
+      (cls === 'all' || (cls === 'effect' ? r.effect !== null : r.cls === cls)) &&
+      (!q || r.name.toLowerCase().includes(q) || r.id.includes(q) || r.description.toLowerCase().includes(q) ||
+        (r.effect !== null && EFFECTS[r.effect].name.toLowerCase().includes(q))),
     );
     const cmp: Record<SortKey, (a: CardRecord, b: CardRecord) => number> = {
       id: (a, b) => a.id.localeCompare(b.id),
@@ -204,7 +210,7 @@ function CardList({ records, db, onToast, onNew, onOpen }: {
       updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
     };
     return list.sort(cmp[sort]);
-  }, [records, query, rarity, status, sort]);
+  }, [records, query, rarity, status, cls, sort]);
 
   async function importBuiltin() {
     const list = builtinRecords();
@@ -266,6 +272,14 @@ function CardList({ records, db, onToast, onNew, onOpen }: {
               </select>
             </label>
             <label>
+              <span>Klasse</span>
+              <select id="admin-class" className="admin-input" value={cls} onChange={(e) => setCls(e.target.value as CardClass | 'all' | 'effect')}>
+                <option value="all">Alle</option>
+                <option value="effect">✨ Nur mit Effekt</option>
+                {CLASSES.map((c) => <option key={c} value={c}>{CLASS_INFO[c].icon} {CLASS_INFO[c].label}</option>)}
+              </select>
+            </label>
+            <label>
               <span>Sortierung</span>
               <select id="admin-sort" className="admin-input" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
                 <option value="rarity">Seltenheit</option>
@@ -289,8 +303,9 @@ function CardList({ records, db, onToast, onNew, onOpen }: {
                       <strong>{r.name}</strong>
                       <span className="admin-row-meta">
                         <span className="mono">{r.id}</span> · <span className={`rarity-text rarity-${r.rarity}`}>{RARITY_LABEL[r.rarity]}</span>
+                        {' '}· {CLASS_INFO[r.cls].icon} {CLASS_INFO[r.cls].label}{r.effect ? ` · ✨ ${EFFECTS[r.effect].name}` : ''}
                       </span>
-                      <span className="admin-row-values">⬆{r.top} ➡{r.right} ⬇{r.bottom} ⬅{r.left} · <b>Σ {r.top + r.right + r.bottom + r.left}</b>{r.imageId ? ' · 🖼️' : ''}{!r.inRunner ? ' · 🚫' : ''}{r.rewardOnly ? ' · 🏆' : ''}</span>
+                      <span className="admin-row-values">⬆{r.top} ➡{r.right} ⬇{r.bottom} ⬅{r.left} · <b>Σ {cardSum(r).toLocaleString('de-DE')}</b>{r.imageId ? ' · 🖼️' : ''}{!r.inRunner ? ' · 🚫' : ''}{r.rewardOnly ? ' · 🏆' : ''}</span>
                     </span>
                     <span className={`status-pill status-${r.status}`}>{STATUS_LABEL[r.status]}</span>
                   </button>
@@ -333,6 +348,10 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
 
   const set = <K extends keyof CardRecord>(key: K, value: CardRecord[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const setValue = (k: ValueKey, v: number) => set(k, Math.min(10, Math.max(1, Math.round(v) || 1)));
+  // An effect always belongs to the class: changing the class removes an effect of another class.
+  const setClass = (cls: CardClass) => setDraft((d) => ({ ...d, cls, effect: d.effect && EFFECTS[d.effect].cls === cls ? d.effect : null }));
+  const effect = draft.effect ? EFFECTS[draft.effect] : null;
+  const fxPreview = draft.effect ? effectPreview([draft.top, draft.right, draft.bottom, draft.left], draft.effect) : null;
 
   /**
    * Deletes a picture only if no other card uses it (duplicates share pictures) and the
@@ -469,6 +488,42 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
             </div>
 
             <div className="field">
+              <span>Klasse</span>
+              <div className="segmented class-seg" role="radiogroup" aria-label="Klasse">
+                {CLASSES.map((c) => (
+                  <button key={c} type="button" role="radio" aria-checked={draft.cls === c} className={`seg ${draft.cls === c ? 'active' : ''}`} onClick={() => setClass(c)}>
+                    <span aria-hidden="true">{CLASS_INFO[c].icon}</span> {CLASS_INFO[c].label}
+                  </button>
+                ))}
+              </div>
+              <small className="muted">{CLASS_INFO[draft.cls].focus}. Die Klasse allein gibt keinen Bonus.</small>
+            </div>
+
+            <label className="field">
+              <span>Spezialeffekt</span>
+              <select id="card-effect" className="admin-input" value={draft.effect ?? ''} onChange={(e) => set('effect', (e.target.value || null) as EffectId | null)}>
+                <option value="">Kein Spezialeffekt</option>
+                {effectsForClass(draft.cls).map((e) => <option key={e.id} value={e.id}>{e.name} (Stärke +{e.value.toLocaleString('de-DE')})</option>)}
+              </select>
+              {effect ? (
+                <div className="effect-box">
+                  <p><strong>✨ {effect.name}</strong> · {effect.trigger === 'play' ? 'wirkt einmal beim Ausspielen' : 'wirkt, solange die Bedingung erfüllt ist'}</p>
+                  <p>{effect.text}</p>
+                  {fxPreview && (
+                    <p className="effect-preview">
+                      {fxPreview.situation}: ⬆{fxPreview.values[0]} ➡{fxPreview.values[1]} ⬇{fxPreview.values[2]} ⬅{fxPreview.values[3]}
+                      {' '}<span className="muted">(statt ⬆{draft.top} ➡{draft.right} ⬇{draft.bottom} ⬅{draft.left})</span>
+                      {fxPreview.note && <><br />{fxPreview.note}</>}
+                    </p>
+                  )}
+                  <small className="muted">Für das Balancing zählt der Effekt wie +{effect.value.toLocaleString('de-DE')} Wertpunkte (gemessen in Testduellen).</small>
+                </div>
+              ) : (
+                <small className="muted">Nur Effekte der Klasse „{CLASS_INFO[draft.cls].label}“ stehen zur Auswahl.</small>
+              )}
+            </label>
+
+            <div className="field">
               <span>Kartenwerte (1–10)</span>
               <div className="value-cross">
                 {VALUE_KEYS.map((k) => (
@@ -489,16 +544,16 @@ function CardEditor({ db, assets, draft: initial, original, records, toast, onTo
                   </div>
                 ))}
                 <div className={`power-badge ${hint.ok ? 'ok' : 'warn'}`}>
-                  <strong>Σ {hint.sum}</strong>
-                  <small>empfohlen {hint.min}–{hint.max}</small>
+                  <strong>Σ {hint.total.toLocaleString('de-DE')}</strong>
+                  <small>{hint.effect > 0 ? `${hint.sum} + Effekt ${hint.effect.toLocaleString('de-DE')} · ` : ''}empfohlen {hint.min}–{hint.max}</small>
                 </div>
               </div>
               {!hint.ok && (
-                <small className="field-warn">Hinweis: Für „{RARITY_LABEL[draft.rarity]}“ liegt die Summe der vier Werte im Spiel sonst bei {hint.min}–{hint.max}. Speichern ist trotzdem möglich.</small>
+                <small className="field-warn">Hinweis: Für „{RARITY_LABEL[draft.rarity]}“ liegt die Stärke (Summe der vier Werte{hint.effect > 0 ? ' plus Effekt' : ''}) im Spiel sonst bei {hint.min}–{hint.max}. Speichern ist trotzdem möglich.</small>
               )}
               {balance.flag && balance.avg !== null && (
                 <small className="field-warn balance-warn">
-                  ⚠️ Auffällig {balance.flag === 'strong' ? 'stark' : 'schwach'}: Gesamtpunktzahl {hint.sum}, die anderen aktiven „{RARITY_LABEL[draft.rarity]}“-Karten haben im Schnitt {balance.avg.toLocaleString('de-DE')} ({balance.diff > 0 ? '+' : ''}{balance.diff.toLocaleString('de-DE')}).
+                  ⚠️ Auffällig {balance.flag === 'strong' ? 'stark' : 'schwach'}: Gesamtpunktzahl {hint.total.toLocaleString('de-DE')}, die anderen aktiven „{RARITY_LABEL[draft.rarity]}“-Karten haben im Schnitt {balance.avg.toLocaleString('de-DE')} ({balance.diff > 0 ? '+' : ''}{balance.diff.toLocaleString('de-DE')}).
                 </small>
               )}
             </div>

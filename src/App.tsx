@@ -14,7 +14,8 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadCardRecords, loadGameSettings } from './game/cardStore';
+import { getDb, isAdmin, loadArenas, loadCardRecords, loadGameSettings } from './game/cardStore';
+import { setArenas } from './game/arenas';
 import { GameSettings, setGameSettings } from './game/settings';
 import { Admin } from './screens/Admin';
 import { League } from './screens/League';
@@ -73,8 +74,10 @@ export function App() {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings] = await Promise.all([loadCardRecords(db), loadGameSettings(db)]);
+      const [records, settings, arenas] = await Promise.all([loadCardRecords(db), loadGameSettings(db), loadArenas(db)]);
       if (alive && settings) setGameSettings(settings);
+      // Arenas are picked when a duel starts, so they can be applied right away.
+      if (alive && arenas) setArenas(arenas);
       if (alive && records && records.length > 0) applyRecords(records);
       const ok = await isAdmin();
       if (alive) setAdmin(ok);

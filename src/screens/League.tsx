@@ -7,6 +7,7 @@ import { Outcome, Side } from '../game/battle';
 import { drawCpuHand } from '../game/ai';
 import { COLLECTION_LEAGUE_RULES, OwnedCounts, autoDeck, countCards, rarityCounts, validateDeck } from '../game/rules';
 import { deriveRng, leagueLayout, matchCode, newMatchSeed, roundRock, seedFingerprint } from '../game/league';
+import { leagueArena } from '../game/arenas';
 import { MatchProgress, emptyMatch, nextStep, recordRound, wins } from '../game/match';
 import { Pick, RunInput, replayRun } from '../game/runner';
 import { SaveData } from '../game/storage';
@@ -129,7 +130,8 @@ export function League({ save, reducedMotion, skin, onSaveDeck, onExit }: Props)
         setup={{
           cpuHand: cpuHand.map((c) => ({ ...c })),
           first: step.first,
-          rocks: [roundRock(seed, step.round)],
+          arena: leagueArena(seed, step.round),
+          rocks: [roundRock(seed, step.round, leagueArena(seed, step.round).cells)],
           label: `${step.decider ? 'Entscheidungsduell' : `Runde ${step.round} von 2`} · Stand ${wins(match, 'player')}:${wins(match, 'cpu')}`,
           tossRng: deriveRng(seed, `toss:${step.round}`),
           finishLabel: 'Weiter',

@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.7 – Klassen, Effekte, Gelände, Arenen
+
+Neu: 6 Klassen, 10 Effekte aus zentralen Vorlagen, 5 Geländearten, 6 Arenen, Admin-Felder (Klasse, Effekt, Vorschau, Stärke) und Reiter „Arenen“, Duell-Anzeige (grün/rot, 🛡, Klassensymbol, Detailansicht, Zielwahl, Effekt-Einblendungen), Computer berücksichtigt Effekte. Grundwerte werden nie verändert; alles gilt nur im laufenden Duell.
+
+**Automatische Tests (insgesamt 151, alle bestanden), neu:** jeder Effekt mit den Beispielen aus dem Auftrag (Kampfgeist inkl. Gleichstand-Reihenfolge, Schildwall/Naturbund nur mit passendem Nachbarn und sofortiger Wegfall bei Eroberung, keine rückwirkende Eroberung, Arkane Kraft nie über 10, Barriere auf alle niedrigsten + Schild blockt genau einmal, Gelände-Effekte, Schwächender Blick mit Pflicht-Zielwahl und Prüfung ungültiger Ziele, nie unter 1), Effekte wirken genau einmal, Stolperstein + Effekte, neues Duell ohne Effekte, gleiche Züge = gleiches Ergebnis, Computer wählt immer gültige Ziele, Admin-Vorschau = Duell-Engine, Kartendaten (alte Karten bekommen eine Klasse, unpassende Effekte werden verworfen), Effektstärke im Balancing, Arenen (Regeln für Rangliste, ungültige Daten, Liga-Arena aus dem Match-Code, Fels nur auf normalen Feldern, Fairness je Arena 38–62 %).
+
+**Browser-Durchlauf (iPhone 390×664, iPhone SE 375×548, iPad 820×1050):** Duell in Arena „Grenzland“ mit Effektkarten – 0 verdeckte oder abgeschnittene Werte, grüne/rote Werte, Schild und Klassensymbole sichtbar, Detailansicht öffnet und schließt. Admin: Klassenfilter, Effekt-Auswahl nur passend zur Klasse, Vorschau, Klassenwechsel entfernt unpassenden Effekt, Speichern; Arena anlegen, Fairness-Hinweise, Rangliste erst nach spiegelgleicher Korrektur, Speichern. Abenteuer, Admin-Dashboard, Liga-Match und Sichtbarkeitsprüfung (4 Bildschirmgrößen) ohne Fehler.
+
 ## Version 1.6 – Liga-Grundlagen
 
 Neu: Deckregeln je Modus, Felsfeld, Match-Format (2 Runden + Entscheidungsduell), faire Lauf-Angebote mit Match-Seed, Aufzeichnen/Nachspielen des Laufs, Collection-League-Testmodus. Das Abenteuer ist unverändert.

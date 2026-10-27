@@ -38,3 +38,16 @@ Ein Match-Seed erzeugt alles Zufällige; vor dem Match wird nur sein SHA-256-Fin
 Deckkarten werden wie von einem gemischten Stapel gezogen (2 pro Tor, 16 von 20), die neutrale Entdeckung ist für
 beide Spieler gleich (gewöhnlich bis selten, Σ 17–21). Steine sind für beide Spieler identisch.
 Spurwechsel werden aufgezeichnet; der Lauf lässt sich exakt nachspielen (Grundlage für die Server-Prüfung).
+
+## Klassen, Effekte und Arenen (Version 1.7)
+
+Effektstärke in Σ-Punkten, gemessen mit gepaarten Testduellen (6000 Duelle je Effekt, zwei unabhängige Läufe;
+1 Σ ≈ 2,1–2,5 Prozentpunkte Siegquote): Kampfgeist 2,1 · Schildwall 3,5 · Arkane Kraft gemessen ≈ 5, eingetragen
+**4** (so entschieden) · Magische Barriere 1 · Naturbund 0,9 · Schwächender Blick 3,1. Gelände-Effekte hängen von der
+Arena ab: Wurzelkraft 0,9, Flammenherz/Frostpanzer/Schattenmantel je 0,3. Im Admin-Editor und im Balancing zählt
+„Summe der Werte + Effektstärke“.
+
+Arenen: Startspieler-Siegquote mit Fels, alle Karten mit Effekt, je 3000 Duelle: Klassisch 46,6 % · Waldlichtung
+45,9 % · Vulkankrater 46,6 % · Frostsee 46,5 % · Schattenhain 46,4 % · Grenzland 46,0 % (kein Unentschieden).
+Ranglisten-Arenen müssen spiegelgleich sein (Feld i = Feld 15 − i), jedes Gelände 0× oder ≥2×, höchstens 8
+Geländefelder; der Fels liegt nur auf normalen Feldern.

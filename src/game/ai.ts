@@ -1,4 +1,5 @@
 // Simple computer opponent: prefers immediate captures, then safe placements.
+// Effects are understood through computeFlips, which plays them out exactly like the real move.
 import { BattleState, HAND_SIZE, HandCard, Move, cardValue, computeFlips, legalMoves, neighbours, toHand } from './battle';
 import { CARDS, Rarity, pickByRarity } from './cards';
 import { Rng } from './rng';
@@ -11,7 +12,7 @@ export function chooseCpuMove(state: BattleState, rng: Rng): Move {
   let bestScore = -Infinity;
   for (const move of moves) {
     const card = state.hands[side][move.handIndex];
-    const flips = computeFlips(state.board, move.cell, card, side).length;
+    const flips = computeFlips(state.board, move.cell, card, side, state.terrain, move.target).length;
     // Defensive bonus: strong values facing empty cells, small penalty for weak exposed sides.
     let defense = 0;
     for (const n of neighbours(move.cell)) {

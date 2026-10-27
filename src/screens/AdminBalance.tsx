@@ -118,7 +118,7 @@ export function BalanceView({ records, db, onToast, onOpen }: {
                     {r.status !== 'active' && <span className={`chip-mini status-${r.status}`}>{STATUS_LABEL[r.status]}</span>}
                   </span>
                 </span>
-                <span className="sum-badge">Σ {b.sum}</span>
+                <span className="sum-badge">Σ {b.sum.toLocaleString('de-DE')}</span>
               </button>
               {r.status !== 'draft' && (
                 <button type="button" className="btn btn-small btn-pause" disabled={busy === r.id} onClick={() => toggleInGame(r)}>
