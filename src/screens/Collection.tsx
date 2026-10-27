@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card } from '../components/Card';
-import { CARDS, RARITIES, RARITY_LABEL, Rarity } from '../game/cards';
+import { CARDS, RARITIES, RARITY_LABEL, Rarity, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
 import { Header } from './Header';
 import { CardDetail } from './CardDetail';
@@ -15,7 +15,7 @@ export function Collection({ save, onBack }: { save: SaveData; onBack: () => voi
   const shown = CARDS.filter((c) => filter === 'all' || c.rarity === filter);
   return (
     <main className="screen">
-      <Header title="Sammlung" onBack={onBack} right={<span className="pill">{owned.size}/{CARDS.length}</span>} />
+      <Header title="Sammlung" onBack={onBack} right={<span className="pill">{ownedActiveIds(save.unlocked).length}/{CARDS.length}</span>} />
       <div className="chips" role="tablist">
         {FILTERS.map((f) => (
           <button key={f} type="button" role="tab" aria-selected={filter === f} className={`chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>

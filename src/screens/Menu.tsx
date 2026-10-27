@@ -1,15 +1,17 @@
-import { CARDS } from '../game/cards';
+import { CARDS, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
 
 interface Props {
   save: SaveData;
   saveOk: boolean;
+  /** Owner/Editor of the game page: may open the card administration. */
+  isAdmin: boolean;
   onPlay: () => void;
-  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop') => void;
+  onNavigate: (screen: 'collection' | 'deck' | 'rules' | 'shop' | 'admin') => void;
   onToggleReducedMotion: () => void;
 }
 
-export function Menu({ save, saveOk, onPlay, onNavigate, onToggleReducedMotion }: Props) {
+export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReducedMotion }: Props) {
   const { wins, draws, losses } = save.stats;
   return (
     <main className="screen menu">
@@ -23,7 +25,7 @@ export function Menu({ save, saveOk, onPlay, onNavigate, onToggleReducedMotion }
 
       <div className="wallet" aria-label="Spielstand">
         <span>🪙 {save.coins}</span>
-        <span>🃏 {save.unlocked.length}/{CARDS.length}</span>
+        <span>🃏 {ownedActiveIds(save.unlocked).length}/{CARDS.length}</span>
         <span>🏆 {wins} · 🤝 {draws} · 💀 {losses}</span>
       </div>
 
@@ -33,6 +35,7 @@ export function Menu({ save, saveOk, onPlay, onNavigate, onToggleReducedMotion }
         <button type="button" className="btn" onClick={() => onNavigate('collection')}>📚 Sammlung</button>
         <button type="button" className="btn" onClick={() => onNavigate('deck')}>🗂️ Deck bearbeiten</button>
         <button type="button" className="btn" onClick={() => onNavigate('rules')}>📜 Regeln</button>
+        {isAdmin && <button type="button" className="btn btn-admin" onClick={() => onNavigate('admin')}>🛠️ Kartenverwaltung</button>}
       </nav>
 
       <label className="toggle">

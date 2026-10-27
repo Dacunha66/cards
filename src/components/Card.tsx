@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { RARITY_LABEL, getCard } from '../game/cards';
+import { CardDef, RARITY_LABEL, getCard } from '../game/cards';
 import type { Side } from '../game/battle';
 
 export type CardBadge = 'deck' | 'discovery' | null;
@@ -19,11 +19,13 @@ interface Props {
   ariaLabel?: string;
   /** Added to all four values (e.g. -1 after a stumble); values never drop below 1. */
   mod?: number;
+  /** Show this card data instead of looking up `id` (live preview of unsaved cards). */
+  def?: CardDef;
 }
 
 
-export function Card({ id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0 }: Props) {
-  const c = getCard(id);
+export function Card({ id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def }: Props) {
+  const c = def ?? getCard(id);
   const v = (n: number) => Math.max(1, n + mod);
   const style = { '--hue': c.hue } as CSSProperties;
   const classes = [

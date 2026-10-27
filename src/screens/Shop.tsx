@@ -2,7 +2,7 @@ import { CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Burst, useCountUp } from '../components/Effects';
 import { RARITY_COLORS } from './Result';
 import { Card } from '../components/Card';
-import { CARDS, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity, getCard } from '../game/cards';
+import { CARDS, ownedActiveIds, RARITIES, RARITY_LABEL, RARITY_ORDER, Rarity, getCard } from '../game/cards';
 import { createRng } from '../game/rng';
 import { PACKS, PackCard, PackDef, buyPack, buySkin, equipSkin } from '../game/shop';
 import { SKINS, SkinDef } from '../game/skins';
@@ -55,7 +55,7 @@ export function Shop({ save, onChange, onBack }: Props) {
   }, [justBought]);
   const [message, setMessage] = useState('');
   const rng = useMemo(() => createRng(), []);
-  const complete = save.unlocked.length >= CARDS.length;
+  const complete = ownedActiveIds(save.unlocked).length >= CARDS.length;
 
   function openPack(pack: PackDef) {
     const r = buyPack(save, pack.id, rng);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outcome } from './game/battle';
 import { Reward, applyReward, computeReward } from './game/rewards';
 import { Pick } from './game/runner';
@@ -12,10 +12,14 @@ import { Battle } from './screens/Battle';
 import { Result } from './screens/Result';
 import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
+import { CARDS, setCardCatalog } from './game/cards';
+import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
+import { getDb, isAdmin, loadCardRecords } from './game/cardStore';
+import { Admin } from './screens/Admin';
 
 export type Screen =
-  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' }
-  | { name: 'runner'; runId: number }
+  | { name: 'menu' | 'collection' | 'deck' | 'rules' | 'shop' | 'admin' }
+  | { name: 'runner'; runId: number; deck: string[] }
   | { name: 'battle'; picks: Pick[] }
   | { name: 'result'; outcome: Outcome; reward: Reward; score: { player: number; cpu: number } };
 
@@ -41,8 +45,48 @@ export function App() {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
   }, [reducedMotion]);
 
-  const startRun = useCallback(() => setScreen({ name: 'runner', runId: Date.now() }), []);
-  const toMenu = useCallback(() => setScreen({ name: 'menu' }), []);
+  // Card database: load the managed cards once, apply them outside of runs and duels.
+  const [admin, setAdmin] = useState(false);
+  const [, setCatalogVersion] = useState(0);
+  const pendingRecords = useRef<CardRecord[] | null>(null);
+  const screenRef = useRef(screen.name);
+  screenRef.current = screen.name;
+
+  const applyRecords = useCallback((records: CardRecord[]) => {
+    if (screenRef.current === 'runner' || screenRef.current === 'battle') {
+      pendingRecords.current = records;
+      return;
+    }
+    pendingRecords.current = null;
+    const catalog = buildCatalog(records);
+    setCardCatalog(catalog.active, catalog.known);
+    setSave((s) => {
+      const fixed = repairDeck(s.deck, s.unlocked, CARDS);
+      return fixed.deck === s.deck && fixed.unlocked === s.unlocked ? s : { ...s, ...fixed };
+    });
+    setCatalogVersion((v) => v + 1);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const records = await loadCardRecords(await getDb());
+      if (alive && records && records.length > 0) applyRecords(records);
+      const ok = await isAdmin();
+      if (alive) setAdmin(ok);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [applyRecords]);
+
+  // Only cards that are in play right now (the database may have changed since the deck was built).
+  const startRun = () => setScreen({ name: 'runner', runId: Date.now(), deck: repairDeck(save.deck, save.unlocked, CARDS).deck });
+  const toMenu = useCallback(() => {
+    setScreen({ name: 'menu' });
+    const pending = pendingRecords.current;
+    if (pending) setTimeout(() => applyRecords(pending), 0);
+  }, [applyRecords]);
 
   const finishBattle = (picks: Pick[], outcome: Outcome, score: { player: number; cpu: number }) => {
     const reward = computeReward(outcome, picks, save.unlocked);
@@ -51,11 +95,12 @@ export function App() {
   };
 
   return (
-    <div className="app" style={skinStyle(getSkin(save.skins.card).colors)}>
+    <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
       {screen.name === 'menu' && (
         <Menu
           save={save}
           saveOk={saveOk}
+          isAdmin={admin}
           onPlay={startRun}
           onNavigate={(name) => setScreen({ name })}
           onToggleReducedMotion={() =>
@@ -69,10 +114,11 @@ export function App() {
       )}
       {screen.name === 'rules' && <Rules onBack={toMenu} />}
       {screen.name === 'shop' && <Shop save={save} onChange={setSave} onBack={toMenu} />}
+      {screen.name === 'admin' && <Admin onCatalogChange={applyRecords} onBack={toMenu} />}
       {screen.name === 'runner' && (
         <Runner
           key={screen.runId}
-          deck={save.deck}
+          deck={screen.deck}
           unlocked={save.unlocked}
           reducedMotion={reducedMotion}
           skin={getSkin(save.skins.runner).colors}

@@ -1,5 +1,5 @@
 // Progress is stored only in this browser (localStorage) – no account, no cloud backup.
-import { DECK_SIZE, STARTER_DECK, STARTING_UNLOCKED, isCardId } from './cards';
+import { DECK_SIZE, STARTER_DECK, STARTING_UNLOCKED, isPlausibleCardId } from './cards';
 import { DEFAULT_SKINS, getSkin, isSkinId } from './skins';
 
 export interface SaveData {
@@ -47,7 +47,8 @@ export function sanitize(raw: unknown): SaveData {
   if (!raw || typeof raw !== 'object') return base;
   const r = raw as Record<string, any>;
   const unlocked = Array.isArray(r.unlocked)
-    ? [...new Set([...STARTING_UNLOCKED, ...r.unlocked.filter(isCardId)])]
+    // Keep every well-formed id: cards from the card database are loaded after the save.
+    ? [...new Set([...STARTING_UNLOCKED, ...r.unlocked.filter(isPlausibleCardId)])]
     : base.unlocked;
   const deck = Array.isArray(r.deck) && isValidDeck(r.deck, unlocked) ? [...r.deck] : [...STARTER_DECK];
   const s = r.stats && typeof r.stats === 'object' ? r.stats : {};

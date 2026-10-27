@@ -12,6 +12,7 @@ export function CardDetail({ id, locked, status, onClose }: { id: string; locked
         {!locked && (
           <p className="values-line">⬆ {c.top} · ➡ {c.right} · ⬇ {c.bottom} · ⬅ {c.left}</p>
         )}
+        {!locked && c.description && <p className="card-description">{c.description}</p>}
         <p className="muted">{status}</p>
         <button type="button" className="btn btn-primary" onClick={onClose}>Schließen</button>
       </div>

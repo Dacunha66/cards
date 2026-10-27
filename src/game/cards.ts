@@ -25,6 +25,8 @@ export interface CardDef {
   hue: number;
   /** Optional picture (URL or data URI). Shown instead of the emoji; cards are 3:4 portrait. */
   image?: string;
+  /** Optional flavour text, shown in the card details. */
+  description?: string;
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = {
@@ -150,11 +152,49 @@ const ROWS: Row[] = [
   ['m04', 'Urdrache Ignivor', 'mythic', 10, 4, 5, 10, '🐲', 0],
 ];
 
-export const CARDS: CardDef[] = ROWS.map(([id, name, rarity, top, right, bottom, left, art, hue]) => ({
+/** The 100 cards shipped with the game – used when no card database is reachable. */
+export const BUILTIN_CARDS: readonly CardDef[] = ROWS.map(([id, name, rarity, top, right, bottom, left, art, hue]) => ({
   id, name, rarity, top, right, bottom, left, art, hue,
 }));
 
-const BY_ID = new Map(CARDS.map((c) => [c.id, c]));
+/**
+ * Cards currently in play (active). Updated in place by `setCardCatalog`, so every
+ * game system that reads CARDS automatically uses cards managed in the admin dashboard.
+ */
+export const CARDS: CardDef[] = [...BUILTIN_CARDS];
+
+/** Every known card, including drafts and disabled ones, so old saves still render. */
+const BY_ID = new Map<string, CardDef>(BUILTIN_CARDS.map((c) => [c.id, c]));
+
+/**
+ * Replaces the card catalog: `active` are the cards in play, `known` additionally
+ * contains disabled/draft cards that players may still own.
+ */
+export function setCardCatalog(active: readonly CardDef[], known: readonly CardDef[] = active): void {
+  CARDS.splice(0, CARDS.length, ...active);
+  BY_ID.clear();
+  for (const c of BUILTIN_CARDS) BY_ID.set(c.id, c);
+  for (const c of known) BY_ID.set(c.id, c);
+  for (const c of active) BY_ID.set(c.id, c);
+}
+
+export function isActiveCard(id: string): boolean {
+  return CARDS.some((c) => c.id === id);
+}
+
+/** Shape of every card id (built-in c01…m04, dashboard cards k001…). */
+export const CARD_ID_RE = /^[a-z]\d{2,4}$/;
+
+/** True for any well-formed id – also for cards that are not loaded yet (e.g. from the database). */
+export function isPlausibleCardId(id: unknown): id is string {
+  return typeof id === 'string' && CARD_ID_RE.test(id);
+}
+
+/** The player's owned cards that are currently in play. */
+export function ownedActiveIds(unlocked: readonly string[]): string[] {
+  const active = new Set(CARDS.map((c) => c.id));
+  return unlocked.filter((id) => active.has(id));
+}
 
 export function getCard(id: string): CardDef {
   const card = BY_ID.get(id);

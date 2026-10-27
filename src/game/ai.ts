@@ -36,7 +36,8 @@ export function drawCpuHand(rng: Rng): HandCard[] {
   const pool = [...CARDS];
   const hand: string[] = [];
   while (hand.length < HAND_SIZE) {
-    const card = pickByRarity(rng, pool, CPU_SHARE)!;
+    // Fall back to any card if the active catalog has none of the usual rarities left.
+    const card = pickByRarity(rng, pool, CPU_SHARE) ?? pool[Math.floor(rng() * pool.length)];
     pool.splice(pool.indexOf(card), 1);
     hand.push(card.id);
   }

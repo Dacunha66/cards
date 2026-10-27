@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Card } from '../components/Card';
-import { DECK_SIZE, RARITY_ORDER, STARTER_DECK, cardPower, getCard } from '../game/cards';
+import { DECK_SIZE, RARITY_ORDER, STARTER_DECK, cardPower, getCard, ownedActiveIds } from '../game/cards';
 import { SaveData, isValidDeck } from '../game/storage';
 import { Header } from './Header';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -15,7 +15,7 @@ export function DeckEditor({ save, onSave, onBack }: Props) {
   const [deck, setDeck] = useState<string[]>(save.deck);
   const [message, setMessage] = useState('');
   const sorted = useMemo(
-    () => [...save.unlocked].sort((a, b) => {
+    () => ownedActiveIds(save.unlocked).sort((a, b) => {
       const ca = getCard(a), cb = getCard(b);
       return RARITY_ORDER[cb.rarity] - RARITY_ORDER[ca.rarity] || cardPower(cb) - cardPower(ca) || a.localeCompare(b);
     }),

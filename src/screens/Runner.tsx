@@ -490,6 +490,18 @@ const RARITY_FRAME: Record<Rarity, string> = {
   common: '#c7ccd6', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', legendary: '#fbbf24', mythic: '#ff7ad9',
 };
 
+/** Card pictures for the canvas, loaded once; null until loaded (the emoji is drawn meanwhile). */
+const pictureCache = new Map<string, HTMLImageElement | null>();
+function cardImage(url: string): HTMLImageElement | null {
+  if (!pictureCache.has(url)) {
+    pictureCache.set(url, null);
+    const img = new Image();
+    img.onload = () => pictureCache.set(url, img);
+    img.src = url;
+  }
+  return pictureCache.get(url) ?? null;
+}
+
 /** Draws a 3:4 card standing on the road. `fade` 0..1 lets passed cards sink and disappear. */
 function drawCard(
   ctx: CanvasRenderingContext2D,
@@ -540,7 +552,14 @@ function drawCard(
   ctx.fill();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  if (cw > 16) {
+  const picture = c.image ? cardImage(c.image) : null;
+  if (picture) {
+    ctx.save();
+    roundRect(ctx, ax, ay, aw, ah, cw * 0.06);
+    ctx.clip();
+    ctx.drawImage(picture, ax, ay, aw, ah);
+    ctx.restore();
+  } else if (cw > 16) {
     ctx.font = `${Math.round(cw * 0.44)}px system-ui, "Apple Color Emoji", sans-serif`;
     ctx.fillStyle = '#fff';
     ctx.fillText(c.art, at.x, y + ch * 0.52);

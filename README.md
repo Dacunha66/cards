@@ -33,6 +33,26 @@ Dein Fortschritt wird **nur in diesem Browser auf diesem Gerät** gespeichert (l
 - iPhone und iPad haben **getrennte** Spielstände.
 - Wenn du in Safari die **Website-Daten löschst** oder im **privaten Modus** spielst, ist der Fortschritt weg.
 
+### Karten verwalten (Admin-Dashboard)
+Im Hauptmenü erscheint für dich (Besitzer der Spielseite) der Knopf **🛠️ Kartenverwaltung**. Normale Spieler sehen ihn nicht.
+
+**Neue Karte anlegen**
+1. **＋ Neue Karte** tippen. Die Karten-ID (k001, k002 …) wird automatisch vergeben.
+2. **Kartenname** eingeben.
+3. **📷 Bild hochladen** → Foto aus der Mediathek wählen oder fotografieren. Es wird automatisch auf das Kartenformat 3:4 zugeschnitten.
+4. **Seltenheit** wählen und die **vier Werte** (Oben, Rechts, Unten, Links, je 1–10) mit − / + einstellen. Das Feld Σ zeigt, ob die Summe zur Seltenheit passt (nur ein Hinweis).
+5. Optional eine **Beschreibung** eingeben.
+6. **Status**: *Entwurf* (nur in der Verwaltung sichtbar), *Aktiv* (sofort im Spiel), *Deaktiviert* (nicht mehr im Spiel).
+7. **Speichern**. Oben links siehst du die ganze Zeit eine Live-Vorschau.
+
+**Bearbeiten, duplizieren, löschen**: Karte in der Liste antippen. Mit der Suche und den Filtern (Status, Seltenheit, Sortierung) findest du Karten schnell.
+
+**Wichtig**
+- Aktive Karten erscheinen beim nächsten Öffnen des Hauptmenüs im Spiel – ohne Programmieren.
+- Das Spiel braucht mindestens **30 aktive Karten**, sonst nutzt es die 100 eingebauten Karten.
+- Deaktivierte Karten verschwinden aus Toren, Packs und Decks; Spieler, die sie besitzen, behalten sie für den Fall, dass du sie wieder aktivierst.
+- Admin ist, wer auf claude.ai **Besitzer** oder **Editor** der Spielseite ist. Andere bekommen Admin-Rechte über das Teilen-Menü der Seite (Rolle „Editor“). Spieler sollten höchstens „Viewer“ sein.
+
 ### Feedback geben
 Schreib Claude einfach im Chat, was dir gefällt oder was anders sein soll, zum Beispiel: „Der Lauf ist zu langsam“ oder „Ich möchte mehr legendäre Karten“. Screenshots helfen.
 
@@ -54,5 +74,11 @@ npm run build:single  # alles in EINER HTML-Datei (dist-single/index.html) für 
 ```
 
 Bei jedem Push laufen Typprüfung, Tests und Build automatisch über GitHub Actions (`.github/workflows/ci.yml`).
+
+### Kartendatenbank
+- Die Karten liegen in der Datenbank der claude.ai-Spielseite (`db`-Capability, Sammlung `cards`, ein Dokument pro Karte), Bilder im Asset-Speicher der Seite (`assets`), Admin-Prüfung über `user.canEdit()`.
+- Zugriffsregel beim Veröffentlichen: `db: { rules: [{ path: "", read: "view", write: "admin" }] }` – lesen dürfen alle Besucher, schreiben nur Besitzer/Editoren; den Asset-Speicher bekommen ohnehin nur Editoren. Die Prüfung macht der Server, nicht das Spiel.
+- Code: `src/game/catalog.ts` (Datenprüfung, IDs, Umwandlung, Deck-Reparatur), `src/game/cardStore.ts` (Plattform-Anbindung, Bild-Zuschnitt), `src/screens/Admin.tsx` (Dashboard).
+- Ohne Plattform (lokal, `npm run dev`) gibt es keine Datenbank; das Spiel nutzt dann die eingebauten Karten aus `src/game/cards.ts`.
 
 Was getestet ist und was noch offen ist, steht in [TESTING.md](TESTING.md).

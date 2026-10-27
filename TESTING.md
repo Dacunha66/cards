@@ -1,5 +1,27 @@
 # Testprotokoll
 
+## Version 1.4 – Admin-Dashboard
+
+Sicherung vor dem Umbau: Stand v1.3 = Commit `2ab6b82` (auf GitHub) und Version 4 der Spielseite.
+
+**Automatische Tests (insgesamt 74, alle bestanden), neu:**
+- Datenprüfung: Werte werden auf 1–10 begrenzt; Karten ohne Namen, mit falscher Seltenheit, fehlenden Werten oder unsicherer ID/Bild-ID werden verworfen
+- Automatische IDs k001, k002 … ohne Kollision; Duplizieren (neue ID, „(Kopie)“, Entwurf); Stärke-Hinweis je Seltenheit
+- Übernahme aller 100 vorhandenen Karten ohne Verlust (Namen und Werte identisch)
+- Nur aktive Karten kommen ins Spiel (Tore, Packs, Gegner); Entwürfe/deaktivierte nicht; neue aktive Karten erscheinen
+- Unter 30 aktiven Karten nutzt das Spiel die eingebauten Karten; der Gegner findet immer 8 Karten
+- Deck-Reparatur, wenn Deckkarten deaktiviert werden; freigeschaltete Datenbank-Karten bleiben im Spielstand erhalten
+- Datenbank (nachgebaut mit derselben Regel wie der Server): Admin speichert/lädt/ändert/löscht; **Nicht-Admins werden abgelehnt**; kaputte Dokumente werden übersprungen
+- Bildzuschnitt auf 3:4 (Quer-, Hochformat, kleine Bilder)
+
+**Browser-Durchlauf mit nachgebauter Plattform (Chromium):**
+- Admin auf iPhone-Größe: 100 Karten übernehmen, Suche, Filter, neue Karte mit Bild-Upload, Werten, Beschreibung, Status Aktiv speichern, duplizieren, Duplikat löschen (gemeinsames Bild bleibt erhalten), neue Karte erscheint in der Sammlung des Spiels
+- Admin am PC (1280 px): zweispaltiger Editor mit Live-Vorschau
+- Normaler Spieler: kein Admin-Knopf, sieht die neue Karte im Spiel, direkter Schreibversuch über die Plattform wird abgelehnt, kein Zugriff auf den Bild-Speicher
+- Kompletter Spiel-Durchlauf (Lauf, Münzwurf, Duell, Belohnung, Neuladen) unverändert ohne Fehler
+
+**Nicht lokal testbar:** die echte claude.ai-Datenbank und der echte Bild-Speicher. Nach dem Veröffentlichen wurden die Kartendaten direkt in der echten Datenbank geprüft (siehe Abschluss-Nachricht).
+
 ## Version 1.3 (Feedback-Runde 3)
 
 Änderungen: rechteckige Karten (3:4) mit Bildbereich, Seltenheit als Rahmenfarbe mit Leuchten/Glanz/Regenbogen, Münzwurf mit Wahl, Animationen beim Einsammeln, Legen, Kämpfen, Ergebnis und im Shop.
