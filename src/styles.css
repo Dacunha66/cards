@@ -779,7 +779,7 @@ button.card { cursor: pointer; }
 .card .corner-icons svg { width: max(11px, 12.5cqw); height: max(11px, 12.5cqw); }
 .card .fx-icon { filter: drop-shadow(0 0 3px rgba(255, 211, 77, 0.95)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)); }
 .card .shield-icon { filter: drop-shadow(0 0 3px rgba(125, 211, 252, 0.95)); }
-.card .shield-icon.shield-detail { position: absolute; z-index: 4; top: 22%; right: 8%; width: 11cqw; height: 11cqw; }
+.card .shield-icon.shield-corner { position: absolute; z-index: 5; top: calc(var(--rw) + var(--ring) + 2.5cqw); left: calc(var(--rw) + var(--ring) + 2.5cqw); width: max(11px, 13cqw); height: max(11px, 13cqw); }
 /* Rarity jewels (epic and above) and sparkles (legendary, mythic). */
 .card .jewel {
   position: absolute; z-index: 3; top: calc(var(--ring) + 0.7cqw); width: max(6px, 6.5cqw); height: max(6px, 6.5cqw);
@@ -843,13 +843,20 @@ button.card { cursor: pointer; }
 /* ---------- Duel layout v1.8: compact bar, big board, one swipeable hand row ---------- */
 .battle-top .scorebar { flex: 1; justify-content: center; gap: clamp(6px, 3vw, 12px); font-size: clamp(15px, 4.8vw, 19px); padding: 0; min-width: 0; white-space: nowrap; }
 .battle-top .scorebar .moves { font-size: 13px; }
-.play-area .board { gap: 3px; padding: 3px; border-width: 1px; border-radius: 12px; }
+.play-area .board { border-width: 1px; border-radius: 12px; }
 .play-area {
   /* Hand card width and the height of the hand row; the board takes all the rest. */
   --hand-w: clamp(52px, min(19cqw, 13cqh), 104px);
   --hand-h: calc(var(--hand-w) * 4 / 3 + 30px);
 }
-.play-area .board { width: min(100cqw, calc((100cqh - var(--hand-h) - 30px) * 0.745)); }
+.play-area .board {
+  /* Board designer: size (share of the space), vertical position in the free space, gaps and frame. */
+  --bw: calc(min(100cqw, calc((100cqh - var(--hand-h) - 30px) * 0.745)) * var(--board-size, 1));
+  width: var(--bw);
+  gap: var(--board-gap, 3px);
+  padding: var(--board-pad, 3px);
+  margin-top: max(0px, calc((100cqh - var(--hand-h) - 30px - var(--bw) * 1.3334) * var(--board-offset, 0)));
+}
 .play-area .hand {
   display: flex; gap: 8px; width: 100cqw; height: var(--hand-h); box-sizing: border-box; margin: 0; padding: 18px 10px 8px;
   overflow-x: auto; overflow-y: visible; scroll-snap-type: x proximity; justify-content: safe center; flex-shrink: 0;
@@ -863,3 +870,59 @@ button.card { cursor: pointer; }
 .card-preview { gap: 14px; grid-auto-flow: row; align-content: center; }
 .card-preview .preview-text { margin: 0 24px; max-width: 360px; text-align: center; font-size: 15px; line-height: 1.45; color: #ece8f6; }
 .card-preview .preview-text b { color: #ffd34d; }
+
+/* ---------- Designs: board picture and page background ---------- */
+.design-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+.board-art { position: absolute; inset: 0; z-index: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.board .cell { z-index: 1; }
+/* With a picture the empty cells become see-through (terrain stays recognisable: at least 35 % colour). */
+.board.has-art { background: #0f0c24; }
+.board.has-art .cell { background: rgb(34 29 71 / var(--cell-alpha, 1)); }
+.board.has-art .cell.terrain-wald { background: rgb(23 59 42 / max(0.35, var(--cell-alpha, 1))); }
+.board.has-art .cell.terrain-lava { background: rgb(69 32 15 / max(0.35, var(--cell-alpha, 1))); }
+.board.has-art .cell.terrain-eis { background: rgb(23 50 74 / max(0.35, var(--cell-alpha, 1))); }
+.board.has-art .cell.terrain-schatten { background: rgb(35 22 64 / max(0.35, var(--cell-alpha, 1))); }
+.board.has-art .cell.rock { background: repeating-linear-gradient(45deg, #2b2840, #2b2840 6px, #252238 6px, #252238 12px); }
+.board.has-art .cell.droppable { background: rgb(45 63 122 / max(0.55, var(--cell-alpha, 1))); }
+.board.cell-borders .cell:not(.rock):not(.droppable) { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24); }
+.page-art { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.page-dim { position: absolute; inset: 0; background: #0b0918; }
+.app { position: relative; z-index: 1; }
+.app.has-page-art { background: transparent; }
+
+/* ---------- Admin: board designer ---------- */
+.admin-tab-designs { grid-column: span 2; }
+.designer { display: flex; flex-direction: column; gap: 22px; }
+.designer-section { display: flex; flex-direction: column; gap: 10px; }
+.designer-section h2 { margin: 0; font-size: 20px; }
+.designer-live { margin: 0; color: var(--muted); }
+.designer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.designer-actions:empty { display: none; }
+.designer-row { cursor: pointer; }
+.designer-row.standard { cursor: default; }
+.designer-thumb { position: relative; flex: 0 0 auto; width: 42px; height: 56px; border-radius: 8px; overflow: hidden; background: #0f0c24; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15); }
+.designer-thumb.page { width: 30px; height: 60px; }
+.standard-thumb { background: radial-gradient(120% 60% at 50% 0%, #2c2266 0%, var(--bg) 70%); }
+.upload-info { background: var(--panel); border-radius: 14px; padding: 10px 12px; font-size: 14px; }
+.upload-info summary { cursor: pointer; font-weight: 800; min-height: 32px; display: flex; align-items: center; }
+.upload-info dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
+.upload-info dt { color: var(--muted); }
+.upload-info dd { margin: 0; }
+.upload-info p { margin: 6px 0 0; line-height: 1.45; }
+.designer-editor { display: flex; flex-direction: column; gap: 12px; }
+.design-size { margin: 0; font-size: 14px; line-height: 1.4; }
+.preview-switch .seg { flex: 1 1 22%; }
+.gesture-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.gesture-hint { margin: 0; font-size: 13px; }
+.slider-row { display: grid; grid-template-columns: 96px 1fr 64px; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; color: var(--text); }
+.slider-row input[type='range'] { width: 100%; height: 36px; accent-color: var(--accent); }
+.slider-row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
+/* Device preview: a real duel layout in device size, scaled down to fit the admin width. */
+.preview-wrap { position: relative; width: 100%; overflow: hidden; border-radius: 22px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.preview-device { position: absolute; top: 0; left: 0; max-width: none; margin: 0; transform-origin: top left; overflow: hidden; z-index: 0; }
+.preview-device .screen { position: relative; z-index: 1; height: 100%; }
+.preview-page-art { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.preview-device .board.editing { touch-action: none; cursor: grab; outline: 2px dashed var(--accent); outline-offset: 3px; }
+.preview-device.editing-page { touch-action: none; cursor: grab; outline: 3px dashed var(--accent); outline-offset: -3px; }
+/* The editor scrolls as a whole: its parts must keep their height (otherwise the preview would shrink to 0 and not react to touch). */
+.designer-editor > *, .designer > * { flex-shrink: 0; }

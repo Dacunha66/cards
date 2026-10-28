@@ -14,7 +14,9 @@ import { Shop, skinStyle } from './screens/Shop';
 import { getSkin } from './game/skins';
 import { CARDS, setCardCatalog } from './game/cards';
 import { CardRecord, buildCatalog, repairDeck } from './game/catalog';
-import { getDb, isAdmin, loadArenas, loadCardRecords, loadGameSettings } from './game/cardStore';
+import { getDb, isAdmin, loadArenas, loadCardRecords, loadDesignState, loadDesigns, loadGameSettings } from './game/cardStore';
+import { ACTIVE, Design, DesignState, setActiveDesigns } from './game/designs';
+import { PageArt } from './components/DesignArt';
 import { setArenas } from './game/arenas';
 import { GameSettings, setGameSettings } from './game/settings';
 import { Admin } from './screens/Admin';
@@ -70,11 +72,22 @@ export function App() {
     setCatalogVersion((v) => v + 1);
   }, []);
 
+  // Published designs (board picture, page background). A running duel keeps the board it started with.
+  const [pageDesign, setPageDesign] = useState<Design | null>(null);
+  const applyDesigns = useCallback((designs: Design[], state: DesignState) => {
+    const byId = new Map(designs.map((d) => [d.id, d]));
+    setActiveDesigns(state.board ? byId.get(state.board) ?? null : null, state.page ? byId.get(state.page) ?? null : null);
+    setPageDesign(ACTIVE.page);
+  }, []);
+
   useEffect(() => {
     let alive = true;
     (async () => {
       const db = await getDb();
-      const [records, settings, arenas] = await Promise.all([loadCardRecords(db), loadGameSettings(db), loadArenas(db)]);
+      const [records, settings, arenas, designs, designState] = await Promise.all([
+        loadCardRecords(db), loadGameSettings(db), loadArenas(db), loadDesigns(db), loadDesignState(db),
+      ]);
+      if (alive && designs && designState) applyDesigns(designs, designState);
       if (alive && settings) setGameSettings(settings);
       // Arenas are picked when a duel starts, so they can be applied right away.
       if (alive && arenas) setArenas(arenas);
@@ -85,7 +98,7 @@ export function App() {
     return () => {
       alive = false;
     };
-  }, [applyRecords]);
+  }, [applyRecords, applyDesigns]);
 
   // Only cards that are in play right now (the database may have changed since the deck was built).
   const startRun = () => setScreen({ name: 'runner', runId: Date.now(), deck: repairDeck(save.deck, save.unlocked, CARDS).deck });
@@ -102,7 +115,9 @@ export function App() {
   };
 
   return (
-    <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
+    <>
+    <PageArt design={pageDesign} />
+    <div className={`app ${screen.name === 'admin' ? 'app-wide' : ''} ${pageDesign ? 'has-page-art' : ''}`} style={skinStyle(getSkin(save.skins.card).colors)}>
       {screen.name === 'menu' && (
         <Menu
           save={save}
@@ -131,7 +146,7 @@ export function App() {
         />
       )}
       {screen.name === 'admin' && (
-        <Admin onCatalogChange={applyRecords} onSettingsChange={(s: GameSettings) => setGameSettings(s)} onBack={toMenu} />
+        <Admin onCatalogChange={applyRecords} onSettingsChange={(s: GameSettings) => setGameSettings(s)} onDesignsChange={applyDesigns} onBack={toMenu} />
       )}
       {screen.name === 'runner' && (
         <Runner
@@ -157,5 +172,6 @@ export function App() {
         <Result outcome={screen.outcome} reward={screen.reward} score={screen.score} coins={save.coins} onAgain={startRun} onMenu={toMenu} />
       )}
     </div>
+    </>
   );
 }

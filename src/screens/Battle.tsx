@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
@@ -10,6 +10,8 @@ import { Arena, pickArena } from '../game/arenas';
 import { CLASS_INFO, EFFECTS, TERRAIN_INFO, Terrain } from '../game/effects';
 import { getCard } from '../game/cards';
 import { CardInspect } from '../components/CardInspect';
+import { BoardArt } from '../components/DesignArt';
+import { ACTIVE, layoutVars } from '../game/designs';
 import { chooseCpuMove, drawCpuHand } from '../game/ai';
 import { Rng, createRng } from '../game/rng';
 import { Pick } from '../game/runner';
@@ -63,6 +65,8 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   const rng = useMemo(() => createRng(), []);
   // Adventure duels take a random active arena; league rounds bring their own.
   const arena = useMemo(() => setup?.arena ?? pickArena(rng), [setup, rng]);
+  // Board picture and grid layout chosen in the board designer (only looks – the 16 cells stay the same).
+  const [boardDesign] = useState(() => ACTIVE.board);
   const [state, setState] = useState<BattleState>(() =>
     createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells),
   );
@@ -222,7 +226,13 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
         </p>
       )}
       <div className="play-area">
-        <div className={`board ${result ? `ended ${result}` : ''}`} role="grid" aria-label="Spielfeld 4 mal 4">
+        <div
+          className={`board ${boardDesign ? 'has-art' : ''} ${boardDesign?.layout.cellBorders ? 'cell-borders' : ''} ${result ? `ended ${result}` : ''}`}
+          style={boardDesign ? (layoutVars(boardDesign.layout) as CSSProperties) : undefined}
+          role="grid"
+          aria-label="Spielfeld 4 mal 4"
+        >
+          <BoardArt design={boardDesign} />
           {state.board.map((cell, i) => {
             if (state.rocks.includes(i)) {
               return <div key={i} role="gridcell" className="cell rock" aria-label="Fels – hier kann niemand legen">🪨</div>;

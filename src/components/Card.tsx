@@ -99,13 +99,13 @@ export function Card({
         <>
           {cls && <Icon className="cls-icon" path={cls.path} color={cls.color} fill={`${cls.color}40`} />}
           <span className="corner-icons">
-            {shield && <Icon className="shield-icon" path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" />}
             {effect && c.effect && <Icon className="fx-icon" path={EFFECT_ICON[c.effect]} color="#ffd34d" fill="rgba(255,211,77,.3)" />}
           </span>
         </>
       )}
       {detail && !locked && <span className="stars" aria-hidden="true">{'★'.repeat(tier)}</span>}
-      {detail && shield && <Icon className="shield-icon shield-detail" path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" />}
+      {/* Shield in the free top-left corner, so it never touches a value even on the smallest board cards. */}
+      {shield && !locked && <Icon className="shield-icon shield-corner" path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" />}
       {tier >= 5 && !locked && (
         <>
           <svg className="sparkle sp1" viewBox="0 0 24 24" aria-hidden="true"><path d={SPARKLE} /></svg>

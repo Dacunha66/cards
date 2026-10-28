@@ -58,6 +58,13 @@ Im Hauptmenü erscheint für dich (Besitzer der Spielseite) der Knopf **🛠️ 
 
 **Arenen (Reiter „Arenen“)**: Vorlagen mit 16 Feldern. Gelände wählen und Felder antippen. „Rangliste“ geht nur, wenn die Arena fair ist (spiegelgleich, kein Gelände nur einmal, höchstens 8 Geländefelder). Abenteuer-Duelle nutzen eine zufällige aktive Arena, Liga-Runden eine Ranglisten-Arena – für beide Spieler dieselbe. Die 6 Standard-Arenen kannst du ändern oder deaktivieren; „↺ Standard wiederherstellen“ macht das rückgängig.
 
+**Spielfeld-Designer (Reiter „Spielfeld-Designer“)**: eigenes Bild unter dem 4×4-Spielfeld und eigener Seitenhintergrund – ohne Programmieren.
+1. **＋ Neues Spielfeldbild hochladen** (bzw. **Neuen Hintergrund**). Über dem Knopf stehen die empfohlenen Bildmaße (Spielfeld 1536 × 2048 px, 3:4; Hintergrund 1290 × 2796 px). Andere Maße gehen auch – das Bild füllt die Fläche immer ohne Verzerrung.
+2. In der **Vorschau** (iPhone/iPad, mit Beispielkarten): mit **einem Finger verschieben**, mit **zwei Fingern zoomen**, oder die Regler Zoom/Horizontal/Vertikal nutzen. „✋ Bild verschieben: aus“ schaltet die Gesten ab, damit du normal scrollen kannst.
+3. **Spielfeldraster**: Größe, Position, Feldabstand, Rahmen, wie deckend die leeren Felder sind, Feldumrandungen. Es bleiben immer dieselben 16 Felder – nur die Darstellung ändert sich.
+4. **Als Entwurf speichern** ändert im Spiel nichts. **✓ Veröffentlichen** (mit Bestätigung) macht das Design für alle sichtbar. „Neu/Bisher“ vergleicht mit dem aktuellen Design, „↺ Zurück zu …“ holt das vorherige zurück, „Standard verwenden“ das ursprüngliche Aussehen.
+Das Originalbild wird nie verändert; gespeichert werden Ausschnitt und Einstellungen separat. Fürs Spiel wird eine verkleinerte Kopie geladen.
+
 **Bearbeiten, duplizieren, löschen**: Karte in der Liste antippen. Mit der Suche und den Filtern (Status, Seltenheit, Sortierung) findest du Karten schnell.
 
 **Wichtig**

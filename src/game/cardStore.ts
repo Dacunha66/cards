@@ -5,6 +5,7 @@
 import { CardRecord, parseCardRecord, recordToDoc } from './catalog';
 import { GameSettings, parseSettings } from './settings';
 import { ARENAS_COLLECTION, Arena, arenaToDoc, parseArena } from './arenas';
+import { DESIGNS_COLLECTION, DESIGN_STATE_DOC, Design, DesignState, designToDoc, displaySize, parseDesign, parseDesignState } from './designs';
 
 export const CARDS_COLLECTION = 'cards';
 /** Admin game settings live in one document: `settings/game`. */
@@ -124,6 +125,66 @@ export async function saveArena(db: Db, arena: Arena): Promise<void> {
 
 export async function deleteArena(db: Db, id: string): Promise<void> {
   await db.collection(ARENAS_COLLECTION).doc(id).delete();
+}
+
+/** Designs (board pictures, page backgrounds). null = no database. */
+export async function loadDesigns(db: Db | null): Promise<Design[] | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(DESIGNS_COLLECTION).get();
+    return snap.docs.flatMap((d) => {
+      const x = d.exists ? parseDesign(d.id, d.data()) : null;
+      return x ? [x] : [];
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function saveDesign(db: Db, design: Design): Promise<void> {
+  await db.collection(DESIGNS_COLLECTION).doc(design.id).set(designToDoc(design));
+}
+
+/** Which designs are published (`settings/design`). */
+export async function loadDesignState(db: Db | null): Promise<DesignState | null> {
+  if (!db) return null;
+  try {
+    const snap = await db.collection(SETTINGS_COLLECTION).doc(DESIGN_STATE_DOC).get();
+    return snap.exists ? parseDesignState(snap.data()) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveDesignState(db: Db, state: DesignState): Promise<void> {
+  await db.collection(SETTINGS_COLLECTION).doc(DESIGN_STATE_DOC).set({ ...state });
+}
+
+/**
+ * Smaller copy of an uploaded design picture for the game: the whole picture (no crop), scaled down to max.
+ * PNG stays PNG so transparency survives; everything else becomes JPEG. The original upload is not touched.
+ */
+export async function prepareDisplayImage(file: Blob, max: { w: number; h: number }): Promise<{ blob: Blob; type: string; w: number; h: number; srcW: number; srcH: number }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image_decode'));
+      el.src = url;
+    });
+    const srcW = img.naturalWidth, srcH = img.naturalHeight;
+    const { w, h } = displaySize(srcW, srcH, max);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+    const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), type, 0.85));
+    return { blob, type, w, h, srcW, srcH };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export async function deleteCardRecord(db: Db, id: string): Promise<void> {

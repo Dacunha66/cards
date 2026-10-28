@@ -13,6 +13,8 @@ import {
 import { GameSettings, defaultSettings } from '../game/settings';
 import { BalanceView, RunnerSettingsView } from './AdminBalance';
 import { ArenaView } from './AdminArenas';
+import { DesignerView } from './AdminDesigns';
+import { Design, DesignState } from '../game/designs';
 import { CLASSES, CLASS_INFO, CardClass, EFFECTS, EffectId, effectPreview, effectsForClass } from '../game/effects';
 
 interface Props {
@@ -20,11 +22,13 @@ interface Props {
   onCatalogChange: (records: CardRecord[]) => void;
   /** Called after the runner settings were saved, so the game uses them right away. */
   onSettingsChange: (settings: GameSettings) => void;
+  /** Called after a design was published, so the game shows it right away. */
+  onDesignsChange: (designs: Design[], state: DesignState) => void;
   onBack: () => void;
 }
 
-type Tab = 'cards' | 'balance' | 'runner' | 'arenas';
-const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen' };
+type Tab = 'cards' | 'balance' | 'runner' | 'arenas' | 'designs';
+const TAB_LABEL: Record<Tab, string> = { cards: 'Karten', balance: 'Balancing', runner: 'Lauf', arenas: 'Arenen', designs: 'Spielfeld-Designer' };
 
 type SortKey = 'id' | 'name' | 'rarity' | 'updated';
 
@@ -35,7 +39,7 @@ const STATUS_HINT: Record<CardStatus, string> = {
   disabled: 'Vorübergehend aus dem Spiel genommen – nicht gelöscht. Spieler behalten sie; jederzeit wieder aktivierbar.',
 };
 
-export function Admin({ onCatalogChange, onSettingsChange, onBack }: Props) {
+export function Admin({ onCatalogChange, onSettingsChange, onDesignsChange, onBack }: Props) {
   const [access, setAccess] = useState<'checking' | 'denied' | 'ok'>('checking');
   const [db, setDb] = useState<Db | null>(null);
   const [assets, setAssets] = useState<Assets | null>(null);
@@ -126,7 +130,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onBack }: Props) {
       {records && records.length > 0 && (
         <div className="admin-tabs" role="tablist">
           {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
-            <button key={t} type="button" role="tab" aria-selected={tab === t} className={`admin-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+            <button key={t} type="button" role="tab" aria-selected={tab === t} className={`admin-tab admin-tab-${t} ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
               {TAB_LABEL[t]}
             </button>
           ))}
@@ -157,6 +161,7 @@ export function Admin({ onCatalogChange, onSettingsChange, onBack }: Props) {
         ) : <p className="muted center">Einstellungen werden geladen …</p>
       )}
       {tab === 'arenas' && records && records.length > 0 && <ArenaView db={db!} onToast={setToast} />}
+      {tab === 'designs' && records && records.length > 0 && <DesignerView db={db!} assets={assets} onToast={setToast} onDesignsChange={onDesignsChange} />}
       {toast && <div className="admin-toast" role="status">{toast}</div>}
     </main>
   );

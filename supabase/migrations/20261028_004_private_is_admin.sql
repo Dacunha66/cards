@@ -58,4 +58,23 @@ create policy "arenas: admins update" on public.arenas
 create policy "arenas: admins delete" on public.arenas
   for delete to authenticated using ((select private.is_admin()));
 
+drop policy "designs: admins insert" on public.designs;
+drop policy "designs: admins update" on public.designs;
+create policy "designs: admins insert" on public.designs
+  for insert to authenticated with check ((select private.is_admin()));
+create policy "designs: admins update" on public.designs
+  for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+drop policy "design state: admins insert" on public.design_state;
+drop policy "design state: admins update" on public.design_state;
+create policy "design state: admins insert" on public.design_state
+  for insert to authenticated with check ((select private.is_admin()));
+create policy "design state: admins update" on public.design_state
+  for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+drop policy "design images: admins upload" on storage.objects;
+drop policy "design images: admins change" on storage.objects;
+create policy "design images: admins upload" on storage.objects
+  for insert to authenticated with check (bucket_id = 'design-images' and (select private.is_admin()));
+create policy "design images: admins change" on storage.objects
+  for update to authenticated using (bucket_id = 'design-images' and (select private.is_admin()));
+
 drop function public.is_admin();

@@ -1,5 +1,15 @@
 # Testprotokoll
 
+## Version 1.9 – Spielfeld-Designer und Seitenhintergrund
+
+Neu: Admin-Reiter „Spielfeld-Designer“ (Upload mit Größenempfehlung, Original unverändert + verkleinerte Kopie, Ausschnitt per Finger/zwei Finger/Regler, Raster-Einstellungen mit festen Grenzen, Vorschau iPhone/iPad mit Beispielkarten, Neu/Bisher-Vergleich, Entwurf, Veröffentlichen mit Bestätigung, zurück zum vorherigen bzw. Standard-Design), eigener Seitenhintergrund mit Abdunklung, Wert-Rauten ohne Flügel, Schild-Symbol oben links. Spielregeln, Karten, Effekte, Gelände und Runner unverändert.
+
+**Automatische Tests (insgesamt 159, alle bestanden), neu:** Grenzen aller Einstellungen, Prüfung ungültiger Datenbank-Dokumente, fortlaufende IDs, Veröffentlichen/Zurück (Spielfeld und Hintergrund unabhängig), Kopie fürs Spiel nie vergrößert oder beschnitten, Verschieben mit dem Finger (Richtung, Grenzen), Zoom um den gewählten Bildpunkt.
+
+**Browser-Durchlauf (Designer):** Upload eines Querformat-Bilds (2400 × 1200) → Original und Kopie gespeichert, Hinweis „anderes Seitenverhältnis“; Ziehen verschiebt den Ausschnitt, Zwei-Finger-Geste zoomt; Regler wirken sofort in der Vorschau; Entwurf speichern ändert das veröffentlichte Design nicht; Veröffentlichen erst nach Bestätigung; Hintergrund sofort sichtbar. Als Spieler auf iPhone, iPhone SE und iPad: Spielfeldbild und Hintergrund sichtbar, alle 16 Felder antippbar, Karten landen auf dem gewählten Feld, 0 verdeckte Werte, Spielfeld und Hand vollständig im Bild – auch mit den extremen Einstellungen (kleinstes/größtes Feld, ganz unten, größte/kleinste Abstände). Kartenverwaltung, Abenteuer und Liga unverändert ohne Fehler.
+
+**Supabase:** Tabellen `designs` und `design_state` (mit Wertgrenzen) und Bildspeicher `design-images` angelegt; alle dürfen lesen, nur Admins schreiben; ein Besucher ohne Anmeldung kann nichts anlegen. Das Spiel speichert vorerst über die Claude-Seite und zieht nach der Netlify-Einrichtung um.
+
 ## Version 1.8 – Neues Kartendesign
 
 Neu: Karten mit großem Bild und Metall-Rauten für die Werte (Besitzer am Ring und an den Rauten, Bonus = grüne Mitte, Malus = dunkle Mitte mit oranger Zahl), Seltenheit am Kartenrand (ab episch Juwelen, ab legendär Holo-Glanz und Funkeln), Klassen- und Effekt-Symbol unten, kompakte Kopfzeile, größeres Spielfeld, Hand als wischbare Reihe, große Vorschau beim Gedrückthalten. Spielmechanik, Kartenwerte, Effekte und Daten unverändert.
