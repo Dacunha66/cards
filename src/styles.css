@@ -701,7 +701,7 @@ label.btn.disabled { opacity: 0.5; }
   /* owner ring (board only) */
   --ring: 0cqw; --own: transparent;
   /* metal of the value diamonds: silver */
-  --m-light: #ffffff; --m-mid: #c9ced8; --m-middark: #8b919c; --m-dark: #4a4f59; --m-face: #b7bcc6; --m-wing: #3b3f48; --m-weak: #20232b;
+  --m-light: #ffffff; --m-mid: #c9ced8; --m-middark: #8b919c; --m-dark: #4a4f59; --m-face: #b7bcc6; --m-weak: #20232b;
   position: relative; display: block; width: 76px; height: auto; aspect-ratio: 3 / 4; padding: 0; margin: 0; border: 0;
   flex-shrink: 0; container-type: inline-size; border-radius: 6% / 4.5%; background: none; color: #fff;
   font-family: Inter, system-ui, -apple-system, sans-serif;
@@ -716,8 +716,8 @@ button.card { cursor: pointer; }
 .card.rarity-legendary { --rw: 3.2cqw; --rbg: linear-gradient(160deg, #fff8dc, #fbbf24 34%, #9a5b06 62%, #ffe59a); --rc: #fbbf24; --rglow: 0 0 14px rgba(251, 191, 36, 0.95); }
 .card.rarity-mythic { --rw: 3.6cqw; --rbg: conic-gradient(from 200deg, #ff6b8b, #ffd36b, #8dff9a, #6bc5ff, #c99bff, #ff6b8b); --rc: #f0abfc; --rglow: 0 0 16px rgba(240, 171, 252, 1); }
 /* On the board: thin owner ring on the very edge, blue/red metal, no glow outside the card. */
-.card.owner-player { --ring: 2.2cqw; --own: var(--player); --m-light: #e3edff; --m-mid: #8fb1f5; --m-middark: #4f78d6; --m-dark: #1d3a8c; --m-face: #5f8ae8; --m-wing: #1f3270; --m-weak: #0c1a42; }
-.card.owner-cpu { --ring: 2.2cqw; --own: #ff4545; --m-light: #ffe3e3; --m-mid: #f59a9a; --m-middark: #d65050; --m-dark: #8c1d1d; --m-face: #e46262; --m-wing: #6e1a1a; --m-weak: #3d0b0b; }
+.card.owner-player { --ring: 2.2cqw; --own: var(--player); --m-light: #e3edff; --m-mid: #8fb1f5; --m-middark: #4f78d6; --m-dark: #1d3a8c; --m-face: #5f8ae8; --m-weak: #0c1a42; }
+.card.owner-cpu { --ring: 2.2cqw; --own: #ff4545; --m-light: #ffe3e3; --m-mid: #f59a9a; --m-middark: #d65050; --m-dark: #8c1d1d; --m-face: #e46262; --m-weak: #3d0b0b; }
 .card.owner-player, .card.owner-cpu { box-shadow: none; }
 
 .card .card-edge { position: absolute; inset: 0; border-radius: inherit; background: var(--rbg); }
@@ -746,16 +746,15 @@ button.card { cursor: pointer; }
   box-shadow: inset 0 0 0 2px #4ade80, inset 0 0 14cqw rgba(74, 222, 128, 0.7);
 }
 
-/* Value diamonds: top/bottom centred on the card edges, left/right at half height. */
+/* Value diamonds (no wings): top/bottom centred on the card edges, left/right at half height. */
 .card .val { position: absolute; z-index: 4; --d: 25cqw; }
-.card .val-top, .card .val-bottom { left: 50%; transform: translateX(-50%); width: calc(var(--d) * 1.9); height: var(--d); }
+.card .val-top, .card .val-bottom { left: 50%; transform: translateX(-50%); width: var(--d); height: var(--d); }
 .card .val-top { top: 0.5cqw; }
 .card .val-bottom { bottom: 0.5cqw; }
-.card .val-left, .card .val-right { top: 50%; transform: translateY(-50%); width: var(--d); height: calc(var(--d) * 1.9); }
+.card .val-left, .card .val-right { top: 50%; transform: translateY(-50%); width: var(--d); height: var(--d); }
 .card .val-left { left: 0.5cqw; }
 .card .val-right { right: 0.5cqw; }
 .card .dia { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1.5px 1.5px rgba(0, 0, 0, 0.7)); }
-.card .dia .wing { fill: var(--m-wing); stroke: var(--m-light); stroke-width: 1.6; stroke-linejoin: round; }
 .card .dia .f-light { fill: var(--m-light); }
 .card .dia .f-mid { fill: var(--m-mid); }
 .card .dia .f-dark { fill: var(--m-dark); }
@@ -831,11 +830,11 @@ button.card { cursor: pointer; }
 .card.locked .art::after { display: none; }
 .card.selected { transform: translateY(-10px) scale(1.06); filter: drop-shadow(0 0 8px rgba(255, 204, 51, 0.85)); }
 
-/* Sizes: xs/sm/md fill their slot, lg is a fixed showcase size. Tiny thumbnails drop the wings and symbols. */
+/* Sizes: xs/sm/md fill their slot, lg is a fixed showcase size. Tiny thumbnails drop the symbols. */
 .card-xs, .card-sm, .card-md { width: 100%; min-width: 0; }
 .card-lg { width: 168px; }
 .card-xs .val { --d: 32cqw; }
-.card-xs .wing, .card-xs .cls-icon, .card-xs .corner-icons, .card-xs .badge, .card-xs .name, .card-xs .sparkle, .card-xs .jewel { display: none; }
+.card-xs .cls-icon, .card-xs .corner-icons, .card-xs .badge, .card-xs .name, .card-xs .sparkle, .card-xs .jewel { display: none; }
 .card-xs .val .v { font-size: 20cqw; text-shadow: 0 0 2px #000, 0 0 2px #000; }
 
 .inspect-cls { display: flex; align-items: center; gap: 6px; }

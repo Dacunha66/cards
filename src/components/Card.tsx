@@ -36,18 +36,13 @@ interface Props {
 
 const DIRS = ['top', 'right', 'bottom', 'left'] as const;
 
-/** Wings of a value diamond: sideways for top/bottom, up/down for the sides (diamond is 0–100). */
-const WINGS_H = 'M10 58 Q -12 70 -46 48 Q -12 60 10 42 Z M90 58 Q 112 70 146 48 Q 112 60 90 42 Z';
-const WINGS_V = 'M58 10 Q 70 -12 48 -46 Q 60 -12 42 10 Z M58 90 Q 70 112 48 146 Q 60 112 42 90 Z';
 const SPARKLE = 'M12 1.5l2.2 8.3 8.3 2.2-8.3 2.2-2.2 8.3-2.2-8.3L1.5 12l8.3-2.2z';
 
 /** A value on its metal relief diamond. The rim shows the owner, the centre shows a bonus (green) or malus (dark). */
 function Value({ dir, value, delta, locked }: { dir: (typeof DIRS)[number]; value: number; delta: number; locked?: boolean }) {
-  const side = dir === 'left' || dir === 'right';
   return (
     <span className={`val val-${dir} ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}`}>
-      <svg className="dia" viewBox={side ? '0 -45 100 190' : '-45 0 190 100'} aria-hidden="true">
-        <path className="wing" d={side ? WINGS_V : WINGS_H} />
+      <svg className="dia" viewBox="0 0 100 100" aria-hidden="true">
         <polygon className="f-light" points="50,2 2,50 20,50 50,20" />
         <polygon className="f-mid" points="50,2 98,50 80,50 50,20" />
         <polygon className="f-dark" points="98,50 50,98 50,80 80,50" />
