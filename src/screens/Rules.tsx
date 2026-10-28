@@ -23,14 +23,14 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <p>Vor dem Duell entscheidet ein <b>Münzwurf</b>: Wer gewinnt, wählt, wer beginnt. Tipp: Wer die <b>letzte</b> Karte legt, hat oft einen Vorteil.</p>
 
         <h2>Klassen, Effekte und Gelände</h2>
-        <p>Jede Karte gehört zu einer <b>Klasse</b> (Symbol unten rechts): {CLASSES.map((c) => `${CLASS_INFO[c].icon} ${CLASS_INFO[c].label}`).join(' · ')}. Die Klasse allein gibt keinen Bonus.</p>
-        <p>Manche Karten haben einen <b>Spezialeffekt</b> – erkennbar am <b style={{ color: 'var(--accent)' }}>goldenen Ring</b> um das Klassensymbol. Effekte gelten nur im laufenden Duell; im nächsten Duell ist alles wieder normal.</p>
+        <p>Jede Karte gehört zu einer <b>Klasse</b> (farbiges Symbol unten links): {CLASSES.map((c) => `${CLASS_INFO[c].icon} ${CLASS_INFO[c].label}`).join(' · ')}. Die Klasse allein gibt keinen Bonus.</p>
+        <p>Manche Karten haben einen <b>Spezialeffekt</b> – erkennbar am <b style={{ color: 'var(--accent)' }}>goldenen Symbol</b> unten rechts. Effekte gelten nur im laufenden Duell; im nächsten Duell ist alles wieder normal.</p>
         <ul>
           {EFFECT_IDS.map((id) => <li key={id}>{CLASS_INFO[EFFECTS[id].cls].icon} <b>{EFFECTS[id].name}</b>: {EFFECTS[id].text}</li>)}
         </ul>
         <p>„Beim Ausspielen“-Effekte wirken <b>vor</b> dem Vergleich und nur einmal. Bedingungen (z. B. „solange eine eigene Karte angrenzt“) werden laufend neu geprüft: Wird eine Nachbarkarte erobert, ändert sich der Bonus sofort – aber es wird dadurch nie nachträglich etwas erobert.</p>
         <p><b>Gelände</b> (farbiger Rand): {TERRAINS.filter((t) => t !== 'normal').map((t) => `${TERRAIN_INFO[t].icon} ${TERRAIN_INFO[t].label}`).join(' · ')}. Gelände hilft nur Karten mit dem passenden Effekt. Der Fels liegt immer auf einem normalen Feld.</p>
-        <p><b style={{ color: '#4ade80' }}>Grüne Werte</b> = gerade verstärkt, <b style={{ color: '#f87171' }}>rote Werte</b> = geschwächt, 🛡 = Schild. Werte bleiben immer zwischen 1 und 10. <b>Tippe eine Karte auf dem Feld an</b>, um Klasse, Effekt und alle Änderungen zu sehen.</p>
+        <p>Die Werte stehen auf Metall-Rauten. Auf dem Spielfeld sind Ring und Rauten <b style={{ color: 'var(--player)' }}>blau</b> (deine Karte) oder <b style={{ color: '#ff6b6b' }}>rot</b> (Gegner). <b style={{ color: '#4ade80' }}>Grüne Rautenmitte</b> = gerade verstärkt, <b style={{ color: '#ffb15c' }}>dunkle Mitte mit oranger Zahl</b> = geschwächt, 🛡 = Schild. Werte bleiben immer zwischen 1 und 10. <b>Tippe eine Karte auf dem Feld an</b>, um Klasse, Effekt und alle Änderungen zu sehen. <b>Halte eine Handkarte gedrückt</b> für eine große Vorschau.</p>
 
         <h2>3 · Belohnung</h2>
         <p>Sieg: 🪙 100 und die seltenste neue <b>Entdeckung</b> aus deinem Lauf wird dauerhaft freigeschaltet. Hattest du sie schon, gibt es 🪙 50 extra.</p>
@@ -40,11 +40,11 @@ export function Rules({ onBack }: { onBack: () => void }) {
         <p>Im Shop kaufst du mit Münzen <b>Booster-Packs</b> (3 Karten, neue Karten werden sofort freigeschaltet, doppelte in Münzen umgetauscht) und <b>Skins</b>, die nur das Aussehen ändern.</p>
 
         <h2>Symbole auf Karten</h2>
-        <p><b style={{ color: 'var(--accent)' }}>★</b> in der Ecke = Entdeckung (gold leuchtend: neue Karte) · <b style={{ color: '#22d3ee' }}>◆</b> = neutrale Entdeckung in der Liga · rote Werte = geschwächt (Stolperstein) · Symbol unten rechts = Klasse (goldener Ring: Spezialeffekt).</p>
+        <p><b style={{ color: 'var(--accent)' }}>★</b> in der Ecke = Entdeckung (gold leuchtend: neue Karte) · <b style={{ color: '#22d3ee' }}>◆</b> = neutrale Entdeckung in der Liga · dunkle Rautenmitte = geschwächt (Stolperstein) · Symbol unten links = Klasse · goldenes Symbol unten rechts = Spezialeffekt.</p>
 
         <h2>Deck</h2>
         <p>Dein Deck besteht aus genau 20 verschiedenen Karten aus deiner Sammlung.</p>
-        <p>Es gibt 100 Karten. Der kleine Edelstein oben rechts zeigt die Seltenheit – je seltener, desto stärker: <b>grau</b> gewöhnlich, <b style={{ color: 'var(--uncommon)' }}>grün</b> ungewöhnlich, <b style={{ color: 'var(--rare)' }}>blau</b> selten, <b style={{ color: 'var(--epic)' }}>lila</b> episch, <b style={{ color: 'var(--legendary)' }}>gold</b> legendär und <b className="rarity-text rarity-mythic">regenbogen</b> mystisch (sehr selten!).</p>
+        <p>Es gibt 100 Karten. Der Kartenrand zeigt die Seltenheit – je seltener, desto stärker, dicker und leuchtender: <b>silber</b> gewöhnlich, <b style={{ color: 'var(--uncommon)' }}>grün</b> ungewöhnlich, <b style={{ color: 'var(--rare)' }}>türkis</b> selten, <b style={{ color: 'var(--epic)' }}>lila</b> episch, <b style={{ color: 'var(--legendary)' }}>gold</b> legendär und <b className="rarity-text rarity-mythic">regenbogen</b> mystisch (sehr selten!). Ab episch funkeln Juwelen in den Ecken, ab legendär glänzt die Karte holografisch.</p>
       </div>
     </main>
   );

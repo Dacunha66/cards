@@ -3,7 +3,7 @@ import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Burst } from '../components/Effects';
 import {
-  BOARD_SIZE, BattleState, HandCard, Outcome, Side, applyMove, blickTargets, cellBreakdown, coinToss, cpuChoosesFirst, createBattle, isGameOver,
+  BOARD_SIZE, BattleState, Breakdown, HandCard, Outcome, Side, applyMove, blickTargets, cellBreakdown, coinToss, cpuChoosesFirst, createBattle, isGameOver,
   other, outcome, score, totalMoves,
 } from '../game/battle';
 import { Arena, pickArena } from '../game/arenas';
@@ -38,6 +38,22 @@ export interface BattleSetup {
   finishLabel: string;
 }
 
+const TERRAIN_EFFECTS = new Set(['wurzelkraft', 'flammenherz', 'frostpanzer', 'schattenmantel']);
+
+/** True while a terrain effect of this card is giving a bonus (soft green glow on the card). */
+function terrainBonus(cardId: string, info: Breakdown): boolean {
+  const effect = getCard(cardId).effect;
+  return !!effect && TERRAIN_EFFECTS.has(effect) && info.parts.some((p) => p.kind === 'aura' && p.source === EFFECTS[effect].name);
+}
+
+/** Full effect text under the large preview (the card itself shows at most three lines). */
+function previewText(cardId: string) {
+  const def = getCard(cardId);
+  const effect = def.effect ? EFFECTS[def.effect] : null;
+  const cls = def.cls ? CLASS_INFO[def.cls].label : '';
+  return effect ? <><b>{effect.name}:</b> {effect.text}</> : `${cls}${cls ? ' · ' : ''}kein Spezialeffekt`;
+}
+
 /** Centre of a board cell in % of the board (the board padding is small enough to ignore). */
 function cellCenter(cell: number): { x: number; y: number } {
   return { x: ((cell % BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE), y: (Math.floor(cell / BOARD_SIZE) + 0.5) * (100 / BOARD_SIZE) };
@@ -50,6 +66,32 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
   const [state, setState] = useState<BattleState>(() =>
     createBattle(picks.map((p) => ({ cardId: p.cardId, mod: p.mod })), setup?.cpuHand ?? drawCpuHand(rng), setup?.first ?? 'player', setup?.rocks ?? [], arena.cells),
   );
+  /** Hand card shown large while it is held. */
+  const [preview, setPreview] = useState<{ id: string; mod: number } | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** True after a long press, so the click that follows does not select the card. */
+  const pressedLong = useRef(false);
+  const longPress = (show: () => void) => {
+    const end = () => {
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+      setPreview(null);
+    };
+    return {
+      onPointerDown: () => {
+        pressedLong.current = false;
+        if (pressTimer.current) clearTimeout(pressTimer.current);
+        pressTimer.current = setTimeout(() => {
+          pressedLong.current = true;
+          show();
+        }, 420);
+      },
+      onPointerUp: end,
+      onPointerLeave: end,
+      onPointerCancel: end,
+      onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+    };
+  };
   /** Board card whose details are open. */
   const [inspect, setInspect] = useState<number | null>(null);
   /** "Schwächender Blick" waiting for its target: chosen cell and possible targets. */
@@ -158,21 +200,20 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
 
   return (
     <main className="screen battle">
+      {/* One compact bar: give up, score, move counter, whose turn – leaves the height for board and hand. */}
       <header className="battle-top">
         <ConfirmButton label="✕" ariaLabel="Duell abbrechen (keine Belohnung)" confirmLabel="Aufgeben?" onConfirm={onQuit} skipConfirm={over} />
-        <div className="cpu-hand" aria-label={`Gegner hat noch ${state.hands.cpu.length} Karten`}>
-          {state.hands.cpu.map((_, i) => <span key={i} className="card-back" />)}
+        <div className="scorebar" aria-live="polite">
+          <span key={`p${sc.player}`} className="score blue pop">Du {sc.player}</span>
+          <span className="moves" aria-label={`Zug ${Math.min(state.moveCount + 1, totalMoves(state))} von ${totalMoves(state)}, Gegner hat noch ${state.hands.cpu.length} Karten`}>
+            Zug {Math.min(state.moveCount + 1, totalMoves(state))}/{totalMoves(state)}
+          </span>
+          <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
         </div>
         <div className={`turn-pill ${phase === 'play' ? state.turn : ''}`}>
           {phase === 'toss' ? 'Münzwurf' : over ? 'Ende' : state.turn === 'player' ? 'Dein Zug' : 'Gegner'}
         </div>
       </header>
-
-      <div className="scorebar" aria-live="polite">
-        <span key={`p${sc.player}`} className="score blue pop">Du {sc.player}</span>
-        <span className="moves">Zug {Math.min(state.moveCount + 1, totalMoves(state))}/{totalMoves(state)}</span>
-        <span key={`c${sc.cpu}`} className="score red pop">{sc.cpu} Gegner</span>
-      </div>
 
       {setup && <p className="round-label">{setup.label}</p>}
       {terrainsUsed.length > 0 && (
@@ -212,6 +253,7 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
                     mod={cell.mod}
                     values={info!.values}
                     shield={info!.barrier}
+                    terrainGlow={terrainBonus(cell.cardId, info!)}
                     owner={owner}
                     size="sm"
                     className={[
@@ -260,22 +302,34 @@ export function Battle({ picks, unlocked, reducedMotion, onEnd, onQuit, setup }:
 
         <p className="hint" aria-live="polite">{hint}</p>
 
+        {/* Hand: one row to swipe through; tap = select, hold = large preview. */}
         <div className="hand" aria-label="Deine Hand">
           {state.hands.player.map(({ cardId: id, mod }, i) => (
-            <Card
-              key={handOrigin[i]}
-              id={id}
-              mod={mod}
-              owner="player"
-              size="sm"
-              badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
-              badgeText={setup ? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
-              selected={selected === i}
-              onClick={phase === 'play' && state.turn === 'player' && !over ? () => { setTargeting(null); setSelected(selected === i ? null : i); } : undefined}
-            />
+            <div key={handOrigin[i]} className="hand-slot" {...longPress(() => setPreview({ id, mod }))}>
+              <Card
+                id={id}
+                mod={mod}
+                size="sm"
+                badge={discoveryIndexes.has(handOrigin[i]) ? 'discovery' : null}
+                badgeText={setup ? 'Neutral' : unlocked.includes(id) ? '★' : 'NEU'}
+                selected={selected === i}
+                onClick={() => {
+                  if (pressedLong.current) return;
+                  if (phase !== 'play' || state.turn !== 'player' || over) return;
+                  setTargeting(null);
+                  setSelected(selected === i ? null : i);
+                }}
+              />
+            </div>
           ))}
         </div>
       </div>
+      {preview && (
+        <div className="card-preview" aria-live="polite">
+          <Card id={preview.id} mod={preview.mod} size="lg" detail />
+          <p className="preview-text">{previewText(preview.id)}</p>
+        </div>
+      )}
       {inspect !== null && state.board[inspect] && (
         <CardInspect board={state.board} terrain={state.terrain} cell={inspect} onClose={() => setInspect(null)} />
       )}

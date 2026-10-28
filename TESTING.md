@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.8 – Neues Kartendesign
+
+Neu: Karten mit großem Bild und Metall-Rauten für die Werte (Besitzer am Ring und an den Rauten, Bonus = grüne Mitte, Malus = dunkle Mitte mit oranger Zahl), Seltenheit am Kartenrand (ab episch Juwelen, ab legendär Holo-Glanz und Funkeln), Klassen- und Effekt-Symbol unten, kompakte Kopfzeile, größeres Spielfeld, Hand als wischbare Reihe, große Vorschau beim Gedrückthalten. Spielmechanik, Kartenwerte, Effekte und Daten unverändert.
+
+**Automatische Tests:** alle 151 bestehen unverändert.
+
+**Browser-Durchlauf:** Kartengröße auf dem Spielfeld iPhone 390×664 77×103 px (vorher 58×77), iPhone SE 53×71 (vorher 43×57), iPad 130×173 (vorher 109×145); Zahlen mindestens 11 px. Sichtbarkeitsprüfung auf 4 Bildschirmgrößen: 0 verdeckte oder abgeschnittene Werte (Handkarten außerhalb des sichtbaren Bereichs der wischbaren Reihe werden nicht gezählt). Gedrückthalten zeigt die Vorschau und wählt die Karte nicht aus. Abenteuer, Admin-Dashboard, Liga-Match und Effekt-Duell ohne Fehler.
+
 ## Version 1.7 – Klassen, Effekte, Gelände, Arenen
 
 Neu: 6 Klassen, 10 Effekte aus zentralen Vorlagen, 5 Geländearten, 6 Arenen, Admin-Felder (Klasse, Effekt, Vorschau, Stärke) und Reiter „Arenen“, Duell-Anzeige (grün/rot, 🛡, Klassensymbol, Detailansicht, Zielwahl, Effekt-Einblendungen), Computer berücksichtigt Effekte. Grundwerte werden nie verändert; alles gilt nur im laufenden Duell.

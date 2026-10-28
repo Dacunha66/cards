@@ -1,12 +1,14 @@
 import { CSSProperties } from 'react';
-import { CardDef, RARITY_LABEL, getCard } from '../game/cards';
+import { CardDef, RARITY_LABEL, RARITY_ORDER, getCard } from '../game/cards';
 import type { Side } from '../game/battle';
 import { CLASS_INFO, EFFECTS } from '../game/effects';
+import { CLASS_ICON, EFFECT_ICON, Icon, SHIELD_PATH } from './cardIcons';
 
 export type CardBadge = 'deck' | 'discovery' | null;
 
 interface Props {
   id: string;
+  /** Only on the board: blue/red ring and blue/red value diamonds. Elsewhere the diamonds are silver. */
   owner?: Side;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   locked?: boolean;
@@ -18,59 +20,110 @@ interface Props {
   className?: string;
   onClick?: () => void;
   ariaLabel?: string;
-  /** Added to all four values (e.g. -1 after a stumble); values never drop below 1. */
+  /** Added to all four values (e.g. -1 after a stumble); values stay within 1–10. */
   mod?: number;
   /** Show this card data instead of looking up `id` (live preview of unsaved cards). */
   def?: CardDef;
-  /** Effective values in the duel [top, right, bottom, left]: higher than printed = green, lower = red. */
+  /** Effective values in the duel [top, right, bottom, left]; higher than printed = green, lower = dark. */
   values?: readonly number[];
   /** Magische Barriere shield is up. */
   shield?: boolean;
+  /** A terrain bonus is active right now (soft green glow inside the picture). */
+  terrainGlow?: boolean;
+  /** Large view: name plate, full effect text and rarity stars instead of the small symbols. */
+  detail?: boolean;
 }
-
 
 const DIRS = ['top', 'right', 'bottom', 'left'] as const;
 
-export function Card({ id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def, values, shield }: Props) {
+/** Wings of a value diamond: sideways for top/bottom, up/down for the sides (diamond is 0–100). */
+const WINGS_H = 'M10 58 Q -12 70 -46 48 Q -12 60 10 42 Z M90 58 Q 112 70 146 48 Q 112 60 90 42 Z';
+const WINGS_V = 'M58 10 Q 70 -12 48 -46 Q 60 -12 42 10 Z M58 90 Q 70 112 48 146 Q 60 112 42 90 Z';
+const SPARKLE = 'M12 1.5l2.2 8.3 8.3 2.2-8.3 2.2-2.2 8.3-2.2-8.3L1.5 12l8.3-2.2z';
+
+/** A value on its metal relief diamond. The rim shows the owner, the centre shows a bonus (green) or malus (dark). */
+function Value({ dir, value, delta, locked }: { dir: (typeof DIRS)[number]; value: number; delta: number; locked?: boolean }) {
+  const side = dir === 'left' || dir === 'right';
+  return (
+    <span className={`val val-${dir} ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}`}>
+      <svg className="dia" viewBox={side ? '0 -45 100 190' : '-45 0 190 100'} aria-hidden="true">
+        <path className="wing" d={side ? WINGS_V : WINGS_H} />
+        <polygon className="f-light" points="50,2 2,50 20,50 50,20" />
+        <polygon className="f-mid" points="50,2 98,50 80,50 50,20" />
+        <polygon className="f-dark" points="98,50 50,98 50,80 80,50" />
+        <polygon className="f-middark" points="2,50 50,98 50,80 20,50" />
+        <polygon className="face" points="50,20 80,50 50,80 20,50" />
+        <polygon className="rim" points="50,2 98,50 50,98 2,50" />
+      </svg>
+      <span className="v">{locked ? '?' : value}</span>
+    </span>
+  );
+}
+
+export function Card({
+  id, owner, size = 'md', locked, badge, badgeText = 'NEU', selected, showName, className = '', onClick, ariaLabel, mod = 0, def, values, shield,
+  terrainGlow, detail,
+}: Props) {
   const c = def ?? getCard(id);
-  const effective = (d: (typeof DIRS)[number]) => (values ? values[DIRS.indexOf(d)] : Math.min(10, Math.max(1, c[d] + mod)));
-  const value = (d: (typeof DIRS)[number]) => {
-    if (locked) return <span className={`v v-${d}`}>?</span>;
-    const n = effective(d);
-    const delta = values ? n - c[d] : 0;
-    return <span className={`v v-${d} ${delta > 0 ? 'v-up' : delta < 0 ? 'v-down' : ''}`}>{n}</span>;
-  };
-  const cls = c.cls ? CLASS_INFO[c.cls] : null;
+  const effective = (i: number) => (values ? values[i] : Math.min(10, Math.max(1, c[DIRS[i]] + mod)));
+  const cls = c.cls ? CLASS_ICON[c.cls] : null;
   const effect = c.effect ? EFFECTS[c.effect] : null;
+  const tier = RARITY_ORDER[c.rarity] + 1;
   const style = { '--hue': c.hue } as CSSProperties;
   const classes = [
     'card', `card-${size}`, `rarity-${c.rarity}`,
     owner ? `owner-${owner}` : '', locked ? 'locked' : '', selected ? 'selected' : '',
-    badge === 'discovery' ? 'discovery' : '', mod < 0 && !values ? 'weakened' : '', className,
+    badge === 'discovery' ? 'discovery' : '', detail ? 'card-detail' : '', terrainGlow ? 'terrain-glow' : '', className,
   ].join(' ');
   const label = ariaLabel ?? (locked
     ? `Gesperrte Karte, ${RARITY_LABEL[c.rarity]}`
-    : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}${cls ? `, ${cls.label}` : ''}${effect ? `, Effekt ${effect.name}` : ''}, oben ${effective('top')}, rechts ${effective('right')}, unten ${effective('bottom')}, links ${effective('left')}${shield ? ', Schild aktiv' : ''}`);
+    : `${c.name}${mod < 0 ? ` (geschwächt ${mod})` : ''}, ${RARITY_LABEL[c.rarity]}${c.cls ? `, ${CLASS_INFO[c.cls].label}` : ''}${effect ? `, Effekt ${effect.name}` : ''}, oben ${effective(0)}, rechts ${effective(1)}, unten ${effective(2)}, links ${effective(3)}${shield ? ', Schild aktiv' : ''}`);
   const content = (
     <>
+      <span className="card-edge" aria-hidden="true" />
       <span className="art" aria-hidden="true">
-        {locked ? '🔒' : c.image ? <img src={c.image} alt="" draggable={false} /> : c.art}
+        {locked ? <span className="art-emoji">🔒</span> : c.image ? <img src={c.image} alt="" draggable={false} /> : <span className="art-emoji">{c.art}</span>}
+        <span className="art-shade" />
       </span>
-      {value('top')}
-      {value('left')}
-      {value('right')}
-      {value('bottom')}
-      <span className="gem" aria-hidden="true" />
-      {/* Class symbol in the free bottom-right corner; a gold ring marks a special effect. */}
-      {cls && !locked && <span className={`cls-icon ${effect ? 'has-effect' : ''}`} aria-hidden="true" title={effect ? `${cls.label} · ${effect.name}` : cls.label}>{cls.icon}</span>}
-      {shield && <span className="shield-icon" aria-hidden="true">🛡</span>}
+      {tier >= 4 && !locked && (
+        <>
+          <span className="jewel jewel-l" aria-hidden="true" />
+          <span className="jewel jewel-r" aria-hidden="true" />
+        </>
+      )}
+      {DIRS.map((d, i) => <Value key={d} dir={d} value={effective(i)} delta={values ? effective(i) - c[d] : mod} locked={locked} />)}
+      {detail && !locked ? (
+        <span className="detail-text">
+          <span className="name-plate">
+            {cls && <Icon className="np-icon" path={cls.path} color={cls.color} fill={`${cls.color}40`} />}
+            <span className="np-name">{c.name}</span>
+          </span>
+          <span className="fx-text">{effect ? <><b>{effect.name}:</b> {effect.short}</> : 'Kein Spezialeffekt'}</span>
+        </span>
+      ) : !locked && (
+        <>
+          {cls && <Icon className="cls-icon" path={cls.path} color={cls.color} fill={`${cls.color}40`} />}
+          <span className="corner-icons">
+            {shield && <Icon className="shield-icon" path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" />}
+            {effect && c.effect && <Icon className="fx-icon" path={EFFECT_ICON[c.effect]} color="#ffd34d" fill="rgba(255,211,77,.3)" />}
+          </span>
+        </>
+      )}
+      {detail && !locked && <span className="stars" aria-hidden="true">{'★'.repeat(tier)}</span>}
+      {detail && shield && <Icon className="shield-icon shield-detail" path={SHIELD_PATH} color="#e0f2fe" fill="rgba(125,211,252,.55)" />}
+      {tier >= 5 && !locked && (
+        <>
+          <svg className="sparkle sp1" viewBox="0 0 24 24" aria-hidden="true"><path d={SPARKLE} /></svg>
+          <svg className="sparkle sp2" viewBox="0 0 24 24" aria-hidden="true"><path d={SPARKLE} /></svg>
+          {tier === 6 && <svg className="sparkle sp3" viewBox="0 0 24 24" aria-hidden="true"><path d={SPARKLE} /></svg>}
+        </>
+      )}
       {badge === 'discovery' && (
         // Small corner symbol – never on top of a value.
         <span className={`badge ${badgeText === 'Neutral' ? 'badge-neutral' : badgeText === 'NEU' ? 'badge-new' : ''}`} title={badgeText} aria-label={badgeText === 'Neutral' ? 'neutrale Entdeckung' : badgeText === 'NEU' ? 'neue Karte' : 'Entdeckung'}>
           {badgeText === 'Neutral' ? '◆' : '★'}
         </span>
       )}
-      {mod < 0 && !values && <span className="mod-tag">{mod}</span>}
       {showName && <span className="name">{locked ? '???' : c.name}</span>}
     </>
   );
