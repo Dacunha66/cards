@@ -1,3 +1,5 @@
+import logoMark from '../assets/gridrune-mark.png';
+import logoWord from '../assets/gridrune-wordmark.png';
 import { CARDS, ownedActiveIds } from '../game/cards';
 import { SaveData } from '../game/storage';
 
@@ -16,10 +18,10 @@ export function Menu({ save, saveOk, isAdmin, onPlay, onNavigate, onToggleReduce
   return (
     <main className="screen menu">
       <div className="logo">
-        <div className="logo-cards" aria-hidden="true">
-          <span>🃏</span><span>⚡</span><span>🃏</span>
-        </div>
-        <h1>Project<br /><strong>Card Rush</strong></h1>
+        <h1 className="brand">
+          <img className="brand-mark" src={logoMark} alt="" />
+          <img className="brand-word" src={logoWord} alt="GridRune" />
+        </h1>
         <p className="tagline">Renne. Sammle. Erobere das Raster.</p>
       </div>
 

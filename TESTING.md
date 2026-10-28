@@ -1,5 +1,11 @@
 # Testprotokoll
 
+## Version 1.11 – Name und Logo „GridRune“
+
+Neu: Spielname GridRune, Logo im Hauptmenü (Symbol + Schriftzug, „Grid“ hell für den dunklen Hintergrund), Seitentitel, Symbol für Browser-Tab und Home-Bildschirm. Der Speicherschlüssel des Spielstands bleibt unverändert (bestehende Spielstände bleiben erhalten).
+
+**Geprüft:** alle 159 automatischen Tests; Hauptmenü auf iPhone, iPhone SE und iPad ohne Fehler, Titel „GridRune“, beide Symbole eingebunden.
+
 ## Version 1.10 – Steampunk-Karten
 
 Neu: Kartendesign im Steampunk-Stil (Bronze-Rahmen mit Nieten, Werte in Tintenklecksen, Zahnrad mit Klassensymbol, geschliffener Seltenheits-Edelstein, Effekt- und Schild-Symbol in Messingkreisen, große Ansicht mit Pergament für Name und Effekt). Besitzer-Ring, Bonus/Malus-Anzeige, Geländeleuchten, Spielfeld-Designer, Spielregeln und Kartendaten unverändert.

@@ -15,6 +15,7 @@ export interface SaveData {
   leagueDeck: string[];
 }
 
+// Kept from the original working title "Project Card Rush" – changing it would lose every existing save.
 export const SAVE_KEY = 'project-card-rush/save-v1';
 
 export interface KeyValueStore {

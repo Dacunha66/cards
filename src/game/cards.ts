@@ -1,4 +1,4 @@
-// All 100 cards of Project Card Rush. Names and art are original placeholders.
+// All 100 cards of GridRune. Names and art are original placeholders.
 // Strength follows rarity: each rarity has a fixed range for the sum of the four values.
 import { Rng, pickWeighted } from './rng';
 import { CardClass, EFFECTS, EffectId } from './effects';

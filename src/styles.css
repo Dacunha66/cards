@@ -112,6 +112,10 @@ button { font: inherit; color: inherit; }
 .logo-cards span:nth-child(1) { transform: rotate(-14deg); }
 .logo-cards span:nth-child(3) { transform: rotate(14deg); }
 .logo h1 { margin: 8px 0 4px; font-size: 26px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; line-height: 1.1; }
+/* GridRune logo: symbol + word mark (light "Grid" for the dark background). */
+.logo h1.brand { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 4px 0 10px; }
+.brand-mark { width: clamp(56px, 17vw, 84px); height: auto; filter: drop-shadow(0 0 12px rgba(0, 220, 220, 0.25)); }
+.brand-word { width: clamp(170px, 52vw, 260px); height: auto; }
 .logo h1 strong { font-size: 44px; font-weight: 900; letter-spacing: 1px; background: linear-gradient(180deg, #fff3b0, #ffb020); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .tagline { color: var(--muted); margin: 0; }
 .wallet { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0; }

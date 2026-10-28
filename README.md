@@ -1,4 +1,4 @@
-# Project Card Rush
+# GridRune
 
 Ein mobiles Browserspiel für iPhone und iPad (Hochformat): Du **rennst** durch 8 Tore, **sammelst** 8 Karten und trittst dann in einem **4×4-Kartenduell** gegen den Computer an.
 
