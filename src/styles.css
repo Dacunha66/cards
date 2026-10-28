@@ -690,131 +690,126 @@ label.btn.disabled { opacity: 0.5; }
 .arena-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: min(100%, 300px); margin: 8px auto 0; padding: 6px; border-radius: 14px; background: #0f0c24; }
 .arena-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ---------- Card (relief diamonds) ---------- */
-/* Layers in one 3:4 container: rarity edge (+ owner ring on the board) → picture → value diamonds → symbols.
-   Everything is placed in % / cqw of the card, so it scales from the 70 px board card to the large detail view,
-   and nothing reaches outside the card (neighbours on the board never overlap). */
+/* ---------- Card (steampunk) ---------- */
+/* Layers in one 3:4 container: bronze frame with rivets → picture → (large view: parchment) → ink-blot values →
+   brass gear with the class, rarity gem, effect/shield → owner ring. Everything sits in % / cqw of the card, so it
+   scales from the small board card to the large view, and nothing reaches outside the card. */
 .card {
-  --hue: 260;
-  /* rarity edge */
-  --rw: 1.6cqw; --rbg: linear-gradient(160deg, #eceef2, #8b93a3 38%, #565e6d 62%, #c9ced6); --rc: #aab1c3; --rglow: 0 0 0 transparent;
-  /* owner ring (board only) */
-  --ring: 0cqw; --own: transparent;
-  /* metal of the value diamonds: silver */
-  --m-light: #ffffff; --m-mid: #c9ced8; --m-middark: #8b919c; --m-dark: #4a4f59; --m-face: #b7bcc6; --m-weak: #20232b;
+  --hue: 30;
+  --rc: #c9ced6;           /* rarity colour (gem) */
+  --own: transparent;      /* owner ring on the board */
+  --art-b: 4%;             /* bottom of the picture (higher in the large view: parchment) */
+  --blot: 25cqw; --num: 14cqw;
   position: relative; display: block; width: 76px; height: auto; aspect-ratio: 3 / 4; padding: 0; margin: 0; border: 0;
-  flex-shrink: 0; container-type: inline-size; border-radius: 6% / 4.5%; background: none; color: #fff;
+  flex-shrink: 0; container-type: inline-size; border-radius: 3.5% / 2.6%; background: none; color: #fffaf0;
   font-family: Inter, system-ui, -apple-system, sans-serif;
-  box-shadow: var(--rglow), 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
   cursor: default; transition: transform 0.15s, filter 0.15s;
   -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
 }
 button.card { cursor: pointer; }
-.card.rarity-uncommon { --rw: 2cqw; --rbg: linear-gradient(160deg, #b9f8dc, #10b981 38%, #065f46 64%, #6ee7b7); --rc: #34d399; --rglow: 0 0 6px rgba(16, 185, 129, 0.55); }
-.card.rarity-rare { --rw: 2.4cqw; --rbg: linear-gradient(160deg, #d9fbff, #22d3ee 38%, #0e6f8a 64%, #7ff0ff); --rc: #22d3ee; --rglow: 0 0 9px rgba(34, 211, 238, 0.7); }
-.card.rarity-epic { --rw: 2.8cqw; --rbg: linear-gradient(160deg, #fbe3ff, #c084fc 36%, #6b21a8 64%, #ecd5ff); --rc: #c084fc; --rglow: 0 0 12px rgba(192, 132, 252, 0.85); }
-.card.rarity-legendary { --rw: 3.2cqw; --rbg: linear-gradient(160deg, #fff8dc, #fbbf24 34%, #9a5b06 62%, #ffe59a); --rc: #fbbf24; --rglow: 0 0 14px rgba(251, 191, 36, 0.95); }
-.card.rarity-mythic { --rw: 3.6cqw; --rbg: conic-gradient(from 200deg, #ff6b8b, #ffd36b, #8dff9a, #6bc5ff, #c99bff, #ff6b8b); --rc: #f0abfc; --rglow: 0 0 16px rgba(240, 171, 252, 1); }
-/* On the board: thin owner ring on the very edge, blue/red metal, no glow outside the card. */
-.card.owner-player { --ring: 2.2cqw; --own: var(--player); --m-light: #e3edff; --m-mid: #8fb1f5; --m-middark: #4f78d6; --m-dark: #1d3a8c; --m-face: #5f8ae8; --m-weak: #0c1a42; }
-.card.owner-cpu { --ring: 2.2cqw; --own: #ff4545; --m-light: #ffe3e3; --m-mid: #f59a9a; --m-middark: #d65050; --m-dark: #8c1d1d; --m-face: #e46262; --m-weak: #3d0b0b; }
+.card.rarity-uncommon { --rc: #34d399; }
+.card.rarity-rare { --rc: #22d3ee; }
+.card.rarity-epic { --rc: #c084fc; }
+.card.rarity-legendary { --rc: #fbbf24; }
+.card.rarity-mythic { --rc: #f0abfc; }
+.card.owner-player { --own: var(--player); }
+.card.owner-cpu { --own: #ff4545; }
 .card.owner-player, .card.owner-cpu { box-shadow: none; }
 
-.card .card-edge { position: absolute; inset: 0; border-radius: inherit; background: var(--rbg); }
-.card.owner-player .card-edge, .card.owner-cpu .card-edge {
-  box-shadow: inset 0 0 0 max(1.5px, var(--ring)) var(--own), inset 0 0 0 max(2.2px, calc(var(--ring) + 0.7cqw)) rgba(5, 4, 12, 0.85);
+.card .card-frame {
+  position: absolute; inset: 0; border-radius: inherit;
+  background:
+    radial-gradient(circle at 22% 14%, rgba(255, 226, 170, 0.28), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(0, 0, 0, 0.35), transparent 50%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 5px),
+    linear-gradient(160deg, #9a7a4f, #6a4d2e 45%, #45311c);
+  box-shadow: inset 0 0 0 1px rgba(255, 230, 180, 0.35), inset 0 0 0 2.2cqw rgba(60, 40, 20, 0.35),
+    inset 1.2cqw 1.2cqw 2cqw rgba(255, 235, 190, 0.2), inset -1.2cqw -1.2cqw 2cqw rgba(0, 0, 0, 0.45);
 }
+.card .rivet {
+  position: absolute; width: 3.4cqw; height: 3.4cqw; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f4e2b8, #8a6a3a 55%, #3a2812); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+.card .r1 { top: 1.6cqw; left: 1.6cqw; } .card .r2 { top: 1.6cqw; right: 1.6cqw; }
+.card .r3 { bottom: 1.6cqw; left: 1.6cqw; } .card .r4 { bottom: 1.6cqw; right: 1.6cqw; }
 .card .art {
-  position: absolute; inset: calc(var(--rw) + var(--ring)); border-radius: 5% / 3.8%; overflow: hidden;
-  display: grid; place-items: center;
-  background: radial-gradient(circle at 50% 40%, hsl(var(--hue) 55% 42%), hsl(var(--hue) 45% 13%) 80%);
+  position: absolute; z-index: 1; top: 4%; left: 5%; right: 5%; bottom: var(--art-b);
+  overflow: hidden; border-radius: 1.5cqw; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 40%, hsl(var(--hue) 42% 40%), #2a1f12 80%);
+  box-shadow: 0 0 0 1.2cqw rgba(48, 32, 16, 0.55);
 }
+.card .art::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 9cqw rgba(20, 12, 4, 0.85), inset 0 0 2cqw rgba(20, 12, 4, 0.9); }
 .card .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.card .art-emoji { font-size: 50cqw; line-height: 1; transform: translateY(-4%); filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45)); }
-.card .art-shade { position: absolute; left: 0; right: 0; bottom: 0; height: 28%; pointer-events: none; background: linear-gradient(180deg, rgba(6, 4, 14, 0), rgba(6, 4, 14, 0.6)); }
-.card.card-detail .art-shade { height: 50%; background: linear-gradient(180deg, rgba(6, 4, 14, 0), rgba(6, 4, 14, 0.88)); }
-/* Holo shine for legendary and mythic cards. */
-.card.rarity-legendary .art::after, .card.rarity-mythic .art::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.55;
-  background: linear-gradient(120deg, transparent 28%, rgba(255, 214, 140, 0.5) 42%, rgba(255, 150, 220, 0.4) 50%, rgba(150, 220, 255, 0.45) 58%, transparent 72%);
-  background-size: 300% 100%; animation: holo 4.5s ease-in-out infinite;
-}
-@keyframes holo { 0%, 35% { background-position: 110% 0; } 100% { background-position: -10% 0; } }
-/* Active terrain bonus: soft green glow inside the picture. */
+.card .art-emoji { font-size: 48cqw; line-height: 1; transform: translateY(-3%); filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5)); }
 .card.terrain-glow .art::before {
   content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   box-shadow: inset 0 0 0 2px #4ade80, inset 0 0 14cqw rgba(74, 222, 128, 0.7);
 }
 
-/* Value diamonds (no wings): top/bottom centred on the card edges, left/right at half height. */
-.card .val { position: absolute; z-index: 4; --d: 25cqw; }
-.card .val-top, .card .val-bottom { left: 50%; transform: translateX(-50%); width: var(--d); height: var(--d); }
-.card .val-top { top: 0.5cqw; }
-.card .val-bottom { bottom: 0.5cqw; }
-.card .val-left, .card .val-right { top: 50%; transform: translateY(-50%); width: var(--d); height: var(--d); }
-.card .val-left { left: 0.5cqw; }
-.card .val-right { right: 0.5cqw; }
-.card .dia { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1.5px 1.5px rgba(0, 0, 0, 0.7)); }
-.card .dia .f-light { fill: var(--m-light); }
-.card .dia .f-mid { fill: var(--m-mid); }
-.card .dia .f-dark { fill: var(--m-dark); }
-.card .dia .f-middark { fill: var(--m-middark); }
-.card .dia .face { fill: var(--m-face); }
-.card .dia .rim { fill: none; stroke: rgba(8, 6, 14, 0.85); stroke-width: 2.5; stroke-linejoin: round; }
+/* Values in ink blots: top/bottom centred on the card edges, left/right at the middle of the picture. */
+.card .val { position: absolute; z-index: 4; width: var(--blot); height: var(--blot); display: grid; place-items: center; }
+.card .val-top { left: 50%; top: 1.5%; transform: translateX(-50%); }
+.card .val-bottom { left: 50%; bottom: 1.5%; transform: translateX(-50%); }
+.card .val-left, .card .val-right { top: calc(4% + (96% - var(--art-b)) / 2); transform: translateY(-50%); }
+.card .val-left { left: 3%; }
+.card .val-right { right: 3%; }
+.card .blot { position: absolute; inset: -8%; width: 116%; height: 116%; overflow: visible; fill: rgba(26, 18, 10, 0.9); }
 .card .val .v {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  font-weight: 900; font-size: max(11px, 13.5cqw); line-height: 1; font-variant-numeric: tabular-nums; color: #fff;
-  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 1px 3px rgba(0, 0, 0, 0.8);
+  position: relative; font-family: 'Grenze Gotisch', Georgia, serif; font-weight: 800; font-size: max(12px, var(--num)); line-height: 1;
+  font-variant-numeric: tabular-nums; color: #fffaf0; text-shadow: 0 0 2px #000, 0 1px 3px #000;
 }
-/* Bonus: green centre and glow. Malus: dark centre in the owner colour, orange number (red is the opponent). */
-.card .val.up .dia { filter: drop-shadow(0 0 2px #4ade80) drop-shadow(0 0 5px rgba(74, 222, 128, 0.95)); }
-.card .val.up .face { fill: #1fae55; }
-.card .val.down .face { fill: var(--m-weak); }
+.card .val.up .blot { fill: rgba(22, 92, 48, 0.95); }
+.card .val.up .v { filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.9)); }
 .card .val.down .v { color: #ffb15c; }
 
-/* Symbols: class bottom-left, shield and effect bottom-right. */
-.card .cls-icon, .card .corner-icons { position: absolute; z-index: 4; bottom: calc(var(--rw) + var(--ring) + 2.5cqw); }
-.card .cls-icon { left: calc(var(--rw) + var(--ring) + 3cqw); width: max(11px, 12.5cqw); height: max(11px, 12.5cqw); filter: drop-shadow(0 0 2px currentColor) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)); }
-.card .corner-icons { right: calc(var(--rw) + var(--ring) + 3cqw); display: flex; gap: 1.5cqw; }
-.card .corner-icons svg { width: max(11px, 12.5cqw); height: max(11px, 12.5cqw); }
-.card .fx-icon { filter: drop-shadow(0 0 3px rgba(255, 211, 77, 0.95)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)); }
-.card .shield-icon { filter: drop-shadow(0 0 3px rgba(125, 211, 252, 0.95)); }
-.card .shield-icon.shield-corner { position: absolute; z-index: 5; top: calc(var(--rw) + var(--ring) + 2.5cqw); left: calc(var(--rw) + var(--ring) + 2.5cqw); width: max(11px, 13cqw); height: max(11px, 13cqw); }
-/* Rarity jewels (epic and above) and sparkles (legendary, mythic). */
-.card .jewel {
-  position: absolute; z-index: 3; top: calc(var(--ring) + 0.7cqw); width: max(6px, 6.5cqw); height: max(6px, 6.5cqw);
-  transform: rotate(45deg); border-radius: 1.5px; background: linear-gradient(135deg, #fff, var(--rc) 50%, var(--rc));
-  box-shadow: 0 0 0 1px rgba(10, 8, 20, 0.75), 0 0 6px var(--rc);
+/* Brass gear with the class symbol (top left). */
+.card .gear { position: absolute; z-index: 4; top: 1cqw; left: 1cqw; width: 22cqw; height: 22cqw; display: grid; place-items: center; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); }
+.card .gear-wheel { position: absolute; inset: 0; width: 100%; height: 100%; }
+.card .gear-icon { position: relative; width: 46%; height: 46%; filter: drop-shadow(0 0 2px var(--cls)); }
+/* Rarity gem: top-right corner on small cards; under the picture (on the parchment) in the large view. */
+.card .gem {
+  position: absolute; z-index: 5; right: 0.8cqw; top: 0.8cqw; width: 16cqw; height: 18cqw; min-width: 12px; min-height: 13px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
 }
-.card.rarity-mythic .jewel { background: var(--rbg); }
-.card .jewel-l { left: calc(var(--ring) + 0.7cqw); }
-.card .jewel-r { right: calc(var(--ring) + 0.7cqw); }
-.card .sparkle { position: absolute; z-index: 5; width: max(7px, 9cqw); height: max(7px, 9cqw); fill: #fffbe6; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(0 0 2px #fff); animation: twinkle 2.4s ease-in-out infinite; pointer-events: none; }
-.card .sp1 { top: 20%; right: 9cqw; }
-.card .sp2 { top: 32%; left: 10cqw; width: max(5px, 6cqw); height: max(5px, 6cqw); animation-delay: 0.8s; }
-.card .sp3 { top: 9%; left: 22%; animation-delay: 1.5s; }
-@keyframes twinkle { 0%, 100% { opacity: 0.35; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1.1); } }
-
-/* Large view: name plate, effect text and rarity stars. */
-/* Large view: smaller diamonds leave a text band between the side values and the bottom value. */
-.card.card-detail .val { --d: 19cqw; }
-.card .detail-text { position: absolute; z-index: 3; left: 8%; right: 8%; top: 63%; bottom: 15.5%; justify-content: flex-start; display: flex; flex-direction: column; align-items: center; gap: 2.5cqw; }
-.card .name-plate {
-  display: flex; align-items: center; justify-content: center; gap: 2cqw; width: 100%; padding: 1.8cqw 4cqw; box-sizing: border-box;
-  clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
-  background: linear-gradient(180deg, rgba(40, 36, 52, 0.92), rgba(16, 13, 24, 0.92)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+.card.rarity-epic .gem, .card.rarity-legendary .gem, .card.rarity-mythic .gem { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 5px var(--rc)); }
+/* Effect (bottom right) and shield (bottom left) in small brass circles. */
+.card .brass {
+  position: absolute; z-index: 4; bottom: 3cqw; width: max(14px, 15cqw); height: max(14px, 15cqw); border-radius: 50%;
+  display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #4a3a22, #1e150b 75%);
+  box-shadow: 0 0 0 1.5px #b08a4c, 0 0 6px rgba(255, 211, 77, 0.5);
 }
-.card .np-icon { width: 6cqw; height: 6cqw; flex: 0 0 auto; }
-.card .np-name { font-family: Cinzel, Georgia, serif; font-weight: 700; font-size: 6.5cqw; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card .fx-text { text-align: center; font-size: 4.6cqw; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #f1eefb; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
-.card .fx-text b { color: #ffd34d; }
-.card .stars { position: absolute; z-index: 4; left: 8%; bottom: calc(var(--rw) + var(--ring) + 4cqw); font-size: 5.5cqw; letter-spacing: 0.5cqw; color: var(--rc); text-shadow: 0 0 4px var(--rc), 0 1px 2px #000; }
+.card .brass svg { width: 60%; height: 60%; }
+.card .fx-icon { right: 3cqw; }
+.card .shield-icon { left: 3cqw; box-shadow: 0 0 0 1.5px #7dd3fc, 0 0 7px rgba(125, 211, 252, 0.9); }
+/* Owner ring on the board: thin, inside the card edge. */
+.card .owner-ring { position: absolute; inset: 0; z-index: 6; pointer-events: none; border-radius: inherit; }
+.card.owner-player .owner-ring, .card.owner-cpu .owner-ring {
+  box-shadow: inset 0 0 0 max(1.5px, 2.2cqw) var(--own), inset 0 0 0 max(2.2px, 2.9cqw) rgba(5, 4, 12, 0.8);
+}
 
-/* Discovery marker in the top-left corner (inside the card). */
+/* Large view: parchment with name and effect text; gem centred on its top edge; bottom value on the card edge. */
+.card.card-detail { --art-b: 35%; --blot: 19cqw; --num: 10.5cqw; }
+.card.card-detail .gear { width: 24cqw; height: 24cqw; }
+.card.card-detail .gem { right: auto; top: auto; left: 50%; bottom: calc(35% - 6.6cqw); transform: translateX(-50%); width: 12cqw; height: 13.5cqw; }
+.card.card-detail .val-bottom { bottom: 0.5%; }
+.card .parchment {
+  position: absolute; z-index: 3; left: 4%; right: 4%; bottom: 13%; height: 22%; border-radius: 1.5cqw; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 1.4cqw; padding: 7cqw 5cqw 0;
+  background: radial-gradient(120% 140% at 50% 40%, #f0dfba, #d4b483 70%, #a8844f);
+  box-shadow: inset 0 0 5cqw rgba(90, 55, 20, 0.55), 0 0 0 1px rgba(60, 38, 14, 0.8);
+}
+.card .pm-name { font-family: 'Grenze Gotisch', Georgia, serif; font-weight: 800; font-size: 8cqw; line-height: 1; color: #1b120a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.card .pm-text {
+  font-family: 'Grenze Gotisch', Georgia, serif; font-weight: 600; font-size: 5cqw; line-height: 1.2; color: #2b1d10; text-align: center;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Discovery marker (hand): bottom-left corner, never on a value. */
 .card .badge {
-  position: absolute; z-index: 6; top: calc(var(--ring) + 2cqw); left: calc(var(--ring) + 2cqw);
-  width: 18cqw; height: 18cqw; min-width: 11px; min-height: 11px; border-radius: 50%;
-  display: grid; place-items: center; line-height: 1; font-size: max(8px, 12cqw); font-weight: 900;
+  position: absolute; z-index: 6; bottom: 3cqw; left: 3cqw;
+  width: 16cqw; height: 16cqw; min-width: 12px; min-height: 12px; border-radius: 50%;
+  display: grid; place-items: center; line-height: 1; font-size: max(8px, 11cqw); font-weight: 900;
   background: #7a5a00; color: #fff3b0; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.6);
 }
 .card .badge.badge-new { background: var(--accent); color: var(--accent-text); box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.6), 0 0 6px var(--accent); }
@@ -825,17 +820,16 @@ button.card { cursor: pointer; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .card.rarity-common .name { color: var(--text); }
-.card.discovery:not(.owner-player):not(.owner-cpu) { box-shadow: var(--rglow), 0 0 10px 1px rgba(255, 204, 51, 0.6); }
-.card.locked { filter: grayscale(0.7); opacity: 0.75; box-shadow: none; }
-.card.locked .art::after { display: none; }
+.card.discovery:not(.owner-player):not(.owner-cpu) { box-shadow: 0 0 10px 1px rgba(255, 204, 51, 0.6); }
+.card.locked { filter: grayscale(0.75); opacity: 0.75; }
 .card.selected { transform: translateY(-10px) scale(1.06); filter: drop-shadow(0 0 8px rgba(255, 204, 51, 0.85)); }
 
-/* Sizes: xs/sm/md fill their slot, lg is a fixed showcase size. Tiny thumbnails drop the symbols. */
+/* Sizes: xs/sm/md fill their slot, lg is a fixed showcase size. Tiny thumbnails keep only picture and values. */
 .card-xs, .card-sm, .card-md { width: 100%; min-width: 0; }
 .card-lg { width: 168px; }
-.card-xs .val { --d: 32cqw; }
-.card-xs .cls-icon, .card-xs .corner-icons, .card-xs .badge, .card-xs .name, .card-xs .sparkle, .card-xs .jewel { display: none; }
-.card-xs .val .v { font-size: 20cqw; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.card-xs { --blot: 34cqw; --num: 22cqw; }
+.card-xs .gear, .card-xs .gem, .card-xs .brass, .card-xs .badge, .card-xs .name, .card-xs .rivet { display: none; }
+.card-xs .val .v { font-size: var(--num); }
 
 .inspect-cls { display: flex; align-items: center; gap: 6px; }
 .inspect-cls svg { width: 18px; height: 18px; }

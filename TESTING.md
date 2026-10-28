@@ -1,5 +1,13 @@
 # Testprotokoll
 
+## Version 1.10 – Steampunk-Karten
+
+Neu: Kartendesign im Steampunk-Stil (Bronze-Rahmen mit Nieten, Werte in Tintenklecksen, Zahnrad mit Klassensymbol, geschliffener Seltenheits-Edelstein, Effekt- und Schild-Symbol in Messingkreisen, große Ansicht mit Pergament für Name und Effekt). Besitzer-Ring, Bonus/Malus-Anzeige, Geländeleuchten, Spielfeld-Designer, Spielregeln und Kartendaten unverändert.
+
+**Automatische Tests:** alle 159 bestehen unverändert.
+
+**Browser-Durchlauf:** Spielfeldkarten iPhone 73 × 97 px, iPhone SE 54 × 72, iPad 130 × 173. Sichtbarkeitsprüfung auf 4 Bildschirmgrößen (Abenteuer, Lauf-Vorschau, Liga): 0 verdeckte oder abgeschnittene Werte. Effekt-Duell (iPhone, SE, iPad) 0 Probleme. Spielfeld-Designer inkl. extremer Raster-Einstellungen: alle 16 Felder antippbar, 0 verdeckte Werte. Große Ansicht (Gedrückthalten) zeigt Pergament mit Name und Effekt, Edelstein unter dem Bild. Abenteuer, Admin-Dashboard und Liga ohne Fehler.
+
 ## Version 1.9 – Spielfeld-Designer und Seitenhintergrund
 
 Neu: Admin-Reiter „Spielfeld-Designer“ (Upload mit Größenempfehlung, Original unverändert + verkleinerte Kopie, Ausschnitt per Finger/zwei Finger/Regler, Raster-Einstellungen mit festen Grenzen, Vorschau iPhone/iPad mit Beispielkarten, Neu/Bisher-Vergleich, Entwurf, Veröffentlichen mit Bestätigung, zurück zum vorherigen bzw. Standard-Design), eigener Seitenhintergrund mit Abdunklung, Wert-Rauten ohne Flügel, Schild-Symbol oben links. Spielregeln, Karten, Effekte, Gelände und Runner unverändert.
